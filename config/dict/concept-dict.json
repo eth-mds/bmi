@@ -1,0 +1,97 @@
+{
+  "map_beta200": {
+    "concepts": ["map", "norepi_equiv"],
+    "description": "MAP - 200 x NeEq",
+    "callback": "map_beta_200",
+    "class": "rec_cncpt"
+  },
+  "charlson": {
+    "description": "No. comorbidities",
+    "category": "Misc.",
+    "target": "id_tbl",
+    "sources": {
+      "mimic_demo": [
+        {
+          "table": "diagnoses_icd",
+          "sub_var": "icd9_code",
+          "class": "col_itm",
+          "callback": "charlson_callback"
+        }
+      ],
+      "mimic": [
+        {
+          "table": "diagnoses_icd",
+          "sub_var": "icd9_code",
+          "class": "col_itm",
+          "callback": "charlson_callback"
+        }
+      ],
+      "eicu_demo": [
+        {
+          "table": "diagnosis",
+          "sub_var": "icd9code",
+          "class": "col_itm",
+          "callback": "charlson_callback"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "diagnosis",
+          "sub_var": "icd9code",
+          "class": "col_itm",
+          "callback": "charlson_callback"
+        }
+      ]
+    }
+  },
+  "elix": {
+    "description": "No. comorbidities",
+    "category": "Misc.",
+    "target": "id_tbl",
+    "sources": {
+      "mimic_demo": [
+        {
+          "table": "diagnoses_icd",
+          "sub_var": "icd9_code",
+          "class": "col_itm",
+          "callback": "elix_callback"
+        }
+      ],
+      "mimic": [
+        {
+          "table": "diagnoses_icd",
+          "sub_var": "icd9_code",
+          "class": "col_itm",
+          "callback": "elix_callback"
+        }
+      ],
+      "eicu_demo": [
+        {
+          "table": "diagnosis",
+          "sub_var": "icd9code",
+          "class": "col_itm",
+          "callback": "elix_callback"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "diagnosis",
+          "sub_var": "icd9code",
+          "class": "col_itm",
+          "callback": "elix_callback"
+        }
+      ]
+    }
+  },
+  "oha": {
+    "sources": {
+      "aumc": [
+        {
+          "table": "drugitems",
+          "sub_var": "itemid",
+          "ids": [12993, 19151, 12803]
+        }
+      ]
+    }
+  }
+}

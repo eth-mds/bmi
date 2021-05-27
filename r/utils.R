@@ -1,0 +1,414 @@
+bin_labels <- function(breaks, unit, lower0 = TRUE) {
+
+  x_labels <- sapply(1:(length(breaks)-1),
+    function(x) paste0("[", breaks[x], "-", breaks[x+1], "]")
+  )
+  first_label <- paste0("< ", breaks[1])
+  if (lower0) first_label <- paste0("[0-", breaks[1], "]")
+  x_labels <- c(first_label, x_labels, paste0("> ", breaks[length(breaks)]))
+  x_labels <- paste(x_labels, unit)
+
+  return(x_labels)
+}
+
+theme_fp <- function(...) {
+  theme_bw(...) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          axis.title.y = element_blank(), axis.title.x = element_blank(),
+          axis.text.y = element_blank(), axis.ticks.y = element_blank())
+}
+
+reshape_frame <- function(frame, break_list) {
+
+  for(col in names(break_list)) {
+
+    breaks <- break_list[[col]]
+
+    x <- frame[, col]
+    x <- as.factor(.bincode(x, breaks = c(-Inf, sort(breaks), Inf)))
+    if(length(breaks) == 1 & breaks[1] == 0.5) {
+      levels(x) <- c("_no", "_yes")
+    } else {
+      levels(x) <- c(
+        paste0(" [", c(0, breaks[-length(breaks)]), "-", breaks, "]"),
+        paste(" >", breaks[length(breaks)])
+      )
+    }
+    frame[, col] <- x
+
+  }
+
+  return(frame)
+
+}
+
+extract_score <- function(model, p.threshold = 0.05) {
+
+  score <- model$coefficients * as.integer(summary(logit)$coefficients[, 4] < p.threshold)
+  score <- score[-1]
+  score <- score / min(abs(score[score != 0]))
+  score <- round(score)
+
+  score
+
+}
+
+discretize <- function(x, breaks) {
+
+  if (is.null(breaks)) return(x)
+  return(.bincode(x, c(-Inf, breaks, Inf)))
+
+}
+
+fill_missing <- function(x, val) {
+  x[is.na(x)] <- val
+  return(x)
+}
+
+carry_fwd <- function(x, time = 1L) {
+
+  res <- x[length(x)]
+
+  if(is.na(res)) {
+
+    cand <- which(!is.na(x))
+    if(length(cand) == 0) return(res)
+    cand <- max(cand)
+    if ((length(x) - cand) <= time) res <- x[cand]
+
+  }
+
+  res
+
+}
+
+carry_bwd <- function(x, time = 1L) {
+
+  res <- x[1]
+
+
+  if (is.na(res)) {
+    cand <- which(!is.na(x))
+    if(length(cand) == 0) return(res)
+    cand <- min(cand)
+    if (cand <= time) res <- x[cand]
+  }
+
+  res
+
+}
+
+median_na <- function(x) {
+  if(all(is.na(x))) return(x[1])
+  return(median(x, na.rm = T))
+}
+
+make_plots <- function(res, save_plots, folder, plot_name, bottom = NULL,
+                       width = 12, height = 5, dpi.res = 300, n.cols = length(res)) {
+
+  wd <- getwd()
+
+  ranges <- lapply(res, function(x) ggplot_build(x)$layout$panel_scales_y[[1]]$range$range)
+  y_limits <- Reduce(function(x, y) c(min(x, y), max(x, y)), ranges)
+  res <- lapply(res, function(x) x + ylim(y_limits))
+  plot <- plot_grid(plotlist = res,
+    ncol = n.cols, labels = c("A", "B", "C", "D")[1:length(res)])
+  grid.arrange(arrangeGrob(plot, bottom = bottom))
+
+  if(save_plots) {
+
+    ggsave(file.path(wd, "paper", "figures", folder, paste0(plot_name, ".tif")),
+      device = "tiff", width = width, height = height, dpi = dpi.res)
+
+  }
+
+}
+
+carry_values_single <- function(tbl, col, time, dir = "forward") {
+  assert_that(has_no_gaps(tbl))
+
+  if (time == 0L) return(tbl)
+
+  tbl <- data.table::copy(tbl)
+  on.exit(tbl[, lag := NULL])
+
+  if(is.null(dir)) dir <- "forward"
+  dir <- as.integer((-1)^(dir == "backward"))
+  for(i in seq.int(1, time)) {
+    tbl[, lag := data.table::shift(.SD, n = dir), by = eval(id_vars(tbl)), .SDcols = col]
+    impute_idx <- is.na(tbl[[col]]) & !is.na(tbl[["lag"]])
+    tbl[impute_idx, eval(col)] <-  tbl[["lag"]][impute_idx]
+
+  }
+
+  tbl
+}
+
+carry_values <- function(tbl, spec) {
+
+  for(s in names(spec)) {
+    tbl <- carry_values_single(tbl, s, spec[[s]][["time"]], spec[[s]][["dir"]])
+  }
+
+  tbl
+}
+
+w_value <- function(source, concept, dir, verbose = FALSE,
+  upto = hours(24L), patient_ids = NULL, imp_val = NULL) {
+
+
+  tbl <- load_concepts(concept, source, patient_ids = patient_ids, verbose = verbose)
+
+  if(is.null(imp_val)) imp_val <- median(tbl[[concept]], na.rm = T)
+  if(grepl("epi|ins|norepi", concept)) imp_val <- 0
+
+  if(is_ts_tbl(tbl)) tbl <- tbl[get(index_var(tbl)) <= upto]
+
+  if(is.null(patient_ids)) patient_ids <- unique(stay_windows(source)[[id_vars(tbl)]])
+
+  pts <- data.table::data.table(patient_ids)
+  data.table::setnames(pts, names(pts), id_vars(tbl))
+
+  pts <- as_id_tbl(pts)
+
+  w_fun <- ifelse(dir == "increasing", max_or_na, min_or_na)
+
+  res <- tbl[, w_fun(get(concept)), by = eval(id_vars(tbl))]
+  data.table::setnames(res, "V1", "w_val")
+
+  res <- merge(pts, res, by = id_vars(res), all.x = T)
+
+  if(length(imp_val) == 2) {
+    res[is.na(w_val), "w_val"] <- runif(sum(is.na(res[["w_val"]])), imp_val)
+  } else {
+    res[is.na(w_val), "w_val"] <- imp_val
+  }
+
+
+  res
+
+}
+
+hypo <- function(source, patient_ids, hypo.threshold = 3.9, upto = hours(72L),
+                 verbose = FALSE, value = F) {
+
+  hypo <- load_concepts("glu", source, patient_ids = patient_ids,
+                        verbose = verbose)
+
+  hypo[, hg := (glu <= 18.016*hypo.threshold)]
+  hypo <- hypo[hg == T & get(index_var(hypo)) <= upto, head(.SD, n = 1L),
+               by = eval(id_vars(hypo))]
+
+  if (value) return(hypo[, c(meta_vars(hypo), "glu"), with = FALSE])
+  hypo[, c(meta_vars(hypo), "hg"), with = FALSE]
+
+}
+
+fwrap <- function(feat) {
+  if(feat == "alt") return("ALT")
+  if(feat == "ast") return("AST")
+  else return(feat)
+}
+
+diff_means <- function(d, ind, threshold) {
+  use <- d[ind, ]
+  mean(!is.na(use[w_val > threshold, "hg"])) - mean(!is.na(use[w_val <= threshold, "hg"]))
+}
+
+ate_sa <- function(d, ind, threshold) {
+  use <- d[ind, ]
+
+  H <- as.integer(!is.na(use[["hg"]]))
+  L <- as.integer(use[["w_val"]] > threshold)
+  S <- use[["w_sofa"]]
+  S[is.na(S)] <- 0
+  S[S > 12] <- 13
+
+  assert_that(length(unique(S)) == 14L)
+  tabular <- table(L, S)
+  propensity <- tabular[1, ] / (tabular[2, ] + tabular[1, ])
+  mean(H*(2*L-1) / (propensity[S+1]*(1-L) + (1-propensity[S+1])*L))
+
+}
+
+lwrap <- function(lab) {
+  if(lab == "liver") return("Liver dysfunction")
+  if(lab == "shock_state") return("Shock")
+  if(lab == "ins_therapy") return("Insulin therapy")
+
+  lab
+
+}
+
+compute_plot <- function(tbl, condition, legend.source, x.pos, y.pos,
+  bins = NULL, unit = NULL, legend.rel.size = 1) {
+
+    print(paste("Dataset:", srcwrap(unique(tbl[["dataset"]]))))
+    print(paste("Conditioning on:", condition))
+    x <- tbl[!is.na(lactbin) & !is.na(get(condition)) & !is.na(f_gluc)]
+    print(paste("Measures used", nrow(x)))
+
+    if (!is.null(bins)) {
+      x[[condition]] <- .bincode(x[[condition]], breaks = c(-Inf, bins, Inf))
+    }
+
+    print(paste(
+      "p-value of the CI test",
+      gcm.test(X = as.matrix(x[["f_gluc"]]), Y = as.matrix(x[[condition]]),
+        Z = as.matrix(x[["lact"]]), regr.method = "gam")[["p.value"]]
+    ))
+
+    df <- x[!is.na(lactbin) & !is.na(get(condition)),
+      median(f_gluc, na.rm = TRUE), by = c("lactbin", condition)]
+
+
+    df[[condition]] <- as.factor(df[[condition]])
+    if (!is.null(bins)) {
+      levels(df[[condition]]) <- bin_labels(bins, unit)
+    } else {
+      levels(df[[condition]]) <- c("no", "yes")
+    }
+
+    data.table::setnames(df, condition, "mid")
+
+    p <- ggplot(df, aes(x = lactbin, y = V1, color = mid)) +
+      geom_line(size = 3) + theme_bw(15) + ggtitle(srcwrap(unique(tbl[["dataset"]]))) +
+      ylab("Glucose (mg/dL)") + xlab("Lactate (mmol/L)") +
+      scale_x_continuous(labels=bin_labels(lactate_bins, NULL), breaks = c(1:(length(lactate_bins)+1))) +
+      guides(color=guide_legend(title=lwrap(condition)))
+    if(grepl(legend.source, unique(tbl[["dataset"]]))) {
+      p <- p + theme(legend.position = c(x.pos, y.pos),
+        legend.box.background = element_rect(colour = "black"),
+        legend.title=element_text(size=rel(legend.rel.size)))
+    } else {
+      p <- p + theme(legend.position = "none")
+    }
+
+    p
+}
+
+sens_spec_table <- function(score, outcome, src) {
+  value_set <- sort(unique(score))
+  sens <- spec <- NULL
+  for(thresh in value_set) {
+    pred <- as.integer(score >= thresh)
+    sens <- c(sens, paste0(round(100*sum(pred == 1 & outcome == 1) / sum(outcome == 1), 2), "%"))
+    spec <- c(spec, paste0(round(100*sum(pred == 0 & outcome == 0) / sum(outcome == 0), 2), "%"))
+  }
+
+  res <- as.data.frame(cbind(sens, spec), stringsAsFactors = F)
+  res <- cbind(threshold = value_set, res)
+  names(res) <- c("threshold", paste0(c("sens", "spec"), "_", src))
+
+  res
+}
+
+tw_glucose <- function(source, patient_ids = config("cohort")[[source]][["all"]]) {
+
+  x <- fill_gaps(load_concepts("glu", source, patient_ids = patient_ids, verbose = F))
+  x[, glu := data.table::nafill(glu, "locf"), by = eval(id_var(x))]
+
+  wins <- stay_windows(source)
+  x <- merge(x, wins)
+  x[get(index_var(x)) >= start & get(index_var(x)) <= end]
+
+  x[, mean(glu, na.rm = T), by = eval(id_var(x))][["V1"]]
+}
+
+mean_glucose <- function(source, patient_ids = config("cohort")[[source]][["all"]]) {
+
+  x <- fill_gaps(load_concepts("glu", source, patient_ids = patient_ids, verbose = F))
+  #x[, glu := data.table::nafill(glu, "locf"), by = eval(id_var(x))]
+
+  wins <- stay_windows(source)
+  x <- merge(x, wins)
+  x[get(index_var(x)) >= start & get(index_var(x)) <= end]
+
+  x[, mean(glu, na.rm = T), by = eval(id_var(x))][["V1"]]
+}
+
+insulin_days <- function(source, patient_ids = config("cohort")[[source]][["all"]], upto = hours(10*24)) {
+
+  wins <- stay_windows(source)
+  patient_ids <- intersect(id_col(wins[!is.na(end)]), patient_ids)
+  wins <- wins[get(id_var(wins)) %in% patient_ids]
+  x <- load_concepts("ins", source, patient_ids = patient_ids, verbose = F)
+
+
+  wins[, end := hours(24*round(end/24))] # round the stay to days
+  wins[end > upto, "end"] <- upto
+  wins[, num_days := as.integer(end/24)]
+
+  x <- merge(x, wins, all = T)
+  x <- x[get(index_var(x)) >= start & get(index_var(x)) < end]
+
+  num_days <- sum(x[, length(unique(.bincode(get(index_var(x)), seq(-0.01, as.integer(upto)-24, 24)))), by = eval(id_var(x))][["V1"]])
+
+  res <- rep(FALSE, sum(wins[["num_days"]]))
+  res[1:num_days] <- TRUE
+
+  res
+}
+
+bin_bmi <- function(bmi, ...) {
+
+  breaks <- c(-Inf, config("bmi-bins")[["who"]], Inf)
+
+  bmi[, bmi_bins := factor(.bincode(bmi, breaks))]
+  levels(bmi[["bmi_bins"]]) <- bin_labels(config("bmi-bins")[["who"]], "kg/m2")
+
+  id_var <- id_vars(bmi)
+  bmi[, c(id_var, "bmi_bins"), with = F]
+
+}
+
+remove_doi <- function(src) {
+  
+  x <- merge(load_concepts("death", src), stay_windows(src), all.x = T)
+  id_col(x[get(index_var(x)) < start | get(index_var(x)) > end])
+  
+}
+
+
+POC_table <- function(poc, table.names, path) {
+
+  my_doc <- read_docx()
+
+  for (src in names(poc)) {
+
+    res <- Reduce(function(x, y) merge(x, y, by = "group", sort = F), poc[[src]])
+    names(res) <- table.names
+
+    my_doc <- body_add(my_doc, srcwrap(src), style = "heading 1")
+    my_doc <- my_doc %>% body_add_table(res, style = "table_template")
+    my_doc <- body_add_break(my_doc)
+
+  }
+
+  print(my_doc, target = path)
+
+  paste("POC table created in", path)
+
+}
+
+PO_char <- function(src, target, breaks = config("bmi-bins")[["who"]], 
+                    patient_ids = config("cohort")[[src]][["bmi"]]) {
+  
+  tbl <- merge(
+    get_target(src, target, upto = hours(Inf), patient_ids = patient_ids),
+    load_concepts("bmi", src, patient_ids = patient_ids)
+  )
+  
+  tbl[, bins := .bincode(bmi, breaks = c(-Inf, breaks, Inf))]
+  
+  res <- tbl[, mean(target), by = "bins"]
+  res <- data.table::setnames(res, "V1", target)
+  res <- data.table::setorderv(res, "bins")
+  res[["group"]] <- paste("BMI", bin_labels(breaks, "kg/m2"))
+  
+  res <- res[, c("group", target), with = F]
+  res[[target]] <- round(res[[target]], 2)
+  
+  res
+  
+}
