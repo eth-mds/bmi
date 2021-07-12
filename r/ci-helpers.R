@@ -42,6 +42,8 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
     
     yt <- merge(yt, zt, all.x = TRUE)
     if (is.logical(zt[[z]])) yt[is.na(get(z)), z] <- FALSE
+    
+    yt <- yt[!is.na(get(z))]
   }
   
   # bootstrap the mean of y and ci(y)

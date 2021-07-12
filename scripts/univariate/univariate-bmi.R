@@ -13,6 +13,7 @@ library(data.table)
 root <- rprojroot::find_root(rprojroot::has_file(".gitignore"))
 r_dir <- file.path(root, "r")
 invisible(lapply(list.files(r_dir, full.names = TRUE), source))
+Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 
 ### BMI dose-response
 
@@ -106,9 +107,67 @@ figures <- list(
   )
 )
 
+figures <- list(
+  hypo_cond_diab = list(
+    title = "Hypoglycemia for Diabetic vs. Non-diabetic",
+    y_label = "Hypoglycemia (proportion)",
+    coh = "bmi",
+    z_cond = "DM",
+    z_cond_name = "Diabetes",
+    z_cond_labels = c("No", "Yes"),
+    pos.x = 0.6,
+    pos.y = 0.8
+  ),
+  death_cond_diab = list(
+    title = "Death for Diabetic vs. Non-diabetic",
+    y_label = "Death (proportion)",
+    coh = "bmi",
+    z_cond = "DM",
+    z_cond_name = "Diabetes",
+    z_cond_labels = c("No", "Yes"),
+    pos.x = 0.6,
+    pos.y = 0.8
+  ),
+  hypo_cond_adm = list(
+    title = "Hypoglycemia and admission type",
+    y_label = "Hypoglycemia (proportion)",
+    coh = "bmi",
+    z_cond = "adm",
+    z_cond_name = "Admission Type",
+    z_cond_labels = c("Medical", "Surgical", "Other"),
+    pos.x = 0.6,
+    pos.y = 0.8
+  ),
+  death_cond_adm = list(
+    title = "Death and admission type",
+    y_label = "Death (proportion)",
+    coh = "bmi",
+    z_cond = "adm",
+    z_cond_name = "Admission Type",
+    z_cond_labels = c("Medical", "Surgical", "Other"),
+    pos.x = 0.6,
+    pos.y = 0.8
+  )
+)
+
 # conditional, multi-source plots
 age_binning <- function(x) 
   .bincode(x, c(-Inf, quantile(x, c(0.25, 0.5, 0.75), na.rm = FALSE), Inf))
+
+bin_binning <- function(x) .bincode(x, c(-Inf, 0.5, Inf))
+
+adm_binning <- function(x) 
+  ifelse(x == "med", 1, ifelse(x == "surg", 2, NA))
+
+figures[["hypo_cond_diab"]][["dat"]] <- CI_dat(c("mimic"), y = "hypo", 
+                                               z = "DM", z_binning = bin_binning)
+figures[["death_cond_diab"]][["dat"]] <- CI_dat(c("mimic"), y = "death", 
+                                               z = "DM", z_binning = bin_binning)
+
+figures[["hypo_cond_adm"]][["dat"]] <- CI_dat(c("mimic"), y = "hypo", 
+                                               z = "adm", z_binning = adm_binning)
+figures[["death_cond_adm"]][["dat"]] <- CI_dat(c("mimic"), y = "death", 
+                                                z = "adm", z_binning = adm_binning)
 
 figures[["mort_cond_age"]][["dat"]] <- CI_dat(src, y = "death", z = "age",
                                               z_binning = age_binning)

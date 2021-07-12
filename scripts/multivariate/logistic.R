@@ -9,6 +9,7 @@ library(matrixStats)
 root <- rprojroot::find_root(rprojroot::has_file(".gitignore"))
 r_dir <- file.path(root, "r")
 invisible(lapply(list.files(r_dir, full.names = TRUE), source))
+Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 
 load_bsgi <- function(data_source) {
   

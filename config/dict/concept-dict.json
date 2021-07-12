@@ -93,5 +93,281 @@
         }
       ]
     }
+  },
+  "enteral": {
+    "target": "win_tbl",
+    "description": "Enteral Nutrition",
+    "class": "lgl_cncpt",
+    "sources": {
+      "mimic_demo": [
+        {
+          "table": "chartevents",
+          "sub_var": "itemid",
+          "ids": [3428, 3429, 3430, 3427, 5908],
+          "dur_var": "storetime",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours"
+        }
+      ],
+      "mimic": [
+        {
+          "table": "chartevents",
+          "sub_var": "itemid",
+          "ids": [3428, 3429, 3430, 3427, 5908, 224785, 224786, 224010, 227588,
+            228307, 228308,  224788, 224789, 224443, 8390,  1698, 204, 228309,
+            227589, 224791, 224792, 228310],
+          "dur_var": "storetime",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours"
+        },
+        {
+          "table": "inputevents_cv",
+          "sub_var": "itemid",
+          "ids": [30090, 30166, 30165, 30077],
+          "dur_var": "storetime",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours"
+        },
+        {
+          "table": "inputevents_mv",
+          "sub_var": "itemid",
+          "ids": [228135, 227975, 225970, 228351],
+          "dur_var": "endtime"
+        }
+      ],
+      "aumc": [
+        {
+          "table": "drugitems",
+          "sub_var": "itemid",
+          "ids": [12616, 12586, 12587, 12588, 12590, 12591, 12592, 12608, 12609,
+            12616, 9155, 9156],
+          "dur_var": "stop"
+        }
+      ],
+      "hirid": [
+        {
+          "table": "pharma",
+          "sub_var": "pharmaid",
+          "ids": [1000785,1000804,1000216,1000573,1001029,1000731,1001066,1000665],
+          "dur_var": "enteredentryat",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "infusiondrug",
+          "sub_var": "drugname",
+          "regex": ["tube feed"],
+          "dur_var": "infusiondrugid",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours",
+          "class": "rgx_itm"
+        },
+        {
+          "table": "intakeoutput",
+          "sub_var": "celllabel",
+          "regex": ["enteral novasource|enteral promote|enteral isosource|Nutrition Total|Enteral/Gastric Tube Intake|Enteral Tube Intake"],
+          "dur_var": "intakeoutputid",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours",
+          "class": "rgx_itm"
+        },
+        {
+          "table": "medication",
+          "sub_var": "drugname",
+          "regex": ["37.5 g tube"],
+          "dur_var": "drugstopoffset",
+          "class": "rgx_itm"
+        }
+      ]
+    }
+  },
+  "TPN": {
+    "target": "win_tbl",
+    "description": "Parenteral Nutrition",
+    "class": "lgl_cncpt",
+    "sources": {
+      "mimic": [
+        {
+          "table": "inputevents_cv",
+          "sub_var": "itemid",
+          "ids": [30032, 30196, 30096, 30197, 30199, 30198, 30200, 30325,
+            30194, 30313, 30301, 30191, 30193, 30099, 30192, 30323,
+            30314, 30203, 30201, 30326, 30202, 30204, 30205, 30195,
+            45930, 30207, 45349, 45754, 45629],
+          "dur_var": "storetime",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours"
+        },
+        {
+          "table": "inputevents_mv",
+          "sub_var": "itemid",
+          "ids": [225916, 225917, 225947],
+          "dur_var": "endtime"
+        }
+      ],
+      "aumc": [
+        {
+          "table": "drugitems",
+          "sub_var": "itemid",
+          "ids": [13019, 18789, 13042, 18795, 12320, 20362, 12321, 14213, 10578,
+            8948, 8949],
+          "dur_var": "stop"
+        }
+      ],
+      "hirid": [
+        {
+          "table": "pharma",
+          "sub_var": "pharmaid",
+          "ids": [1000714,1000805,1000806,1000807,1000852,1000558,1000559,
+            1000560,1000561,1000694],
+          "dur_var": "enteredentryat",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "infusiondrug",
+          "sub_var": "drugname",
+          "regex": ["TPN|PPN"],
+          "dur_var": "infusiondrugid",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours",
+          "class": "rgx_itm"
+        },
+        {
+          "table": "intakeoutput",
+          "sub_var": "celllabel",
+          "regex": ["TPN|PPN"],
+          "dur_var": "intakeoutputid",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_2hours",
+          "class": "rgx_itm"
+        },
+        {
+          "table": "medication",
+          "sub_var": "drugname",
+          "regex": ["Parenteral Nutrition"],
+          "dur_var": "drugstopoffset",
+          "class": "rgx_itm"
+        }
+      ]
+    }
+  },
+  "cortico": {
+    "target": "win_tbl",
+    "description": "Corticosteroids",
+    "class": "lgl_cncpt",
+    "sources": {
+      "mimic": [
+        {
+          "table": "inputevents_cv",
+          "sub_var": "itemid",
+          "ids": [30069],
+          "dur_var": "storetime",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_6hours"
+        },
+        {
+          "table": "prescriptions",
+          "sub_var": "drug",
+          "regex": ["hydrocortisone|fludrocortisone|dexamethasone|methylprednisolone|prednisone"],
+          "class": "rgx_itm",
+          "dur_var": "enddate",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_6hours"
+        }
+      ],
+      "aumc": [
+        {
+          "table": "drugitems",
+          "sub_var": "itemid",
+          "ids": [7160, 10628, 6922, 8132, 6995],
+          "dur_var": "stop"
+        }
+      ],
+      "hirid": [
+        {
+          "table": "pharma",
+          "sub_var": "pharmaid",
+          "ids": [1000383, 1000770, 1000431, 1000432, 1000433, 1000434, 1000435,
+            1000486, 1000487, 1000488, 151, 146, 1000929, 1000325, 1000769],
+          "dur_var": "enteredentryat",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_6hours"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "infusiondrug",
+          "sub_var": "drugname",
+          "regex": ["methylprednisolone"],
+          "dur_var": "infusiondrugid",
+          "target": "ts_tbl",
+          "callback": "ts_to_win_6hours",
+          "class": "rgx_itm"
+        },
+        {
+          "table": "medication",
+          "sub_var": "drugname",
+          "regex": ["hydrocortisone|prednisone|methylprednisolone|solumedrol|solu-medrol|dexamethasone"],
+          "dur_var": "drugstopoffset",
+          "class": "rgx_itm"
+        }
+      ]
+    }
+  },
+  "DM": {
+    "description": "No. comorbidities",
+    "category": "Misc.",
+    "target": "id_tbl",
+    "sources": {
+      "mimic_demo": [
+        {
+          "table": "diagnoses_icd",
+          "sub_var": "icd9_code",
+          "class": "col_itm",
+          "callback": "DM_callback"
+        }
+      ],
+      "mimic": [
+        {
+          "table": "diagnoses_icd",
+          "sub_var": "icd9_code",
+          "class": "col_itm",
+          "callback": "DM_callback"
+        }
+      ],
+      "eicu_demo": [
+        {
+          "table": "diagnosis",
+          "sub_var": "icd9code",
+          "class": "col_itm",
+          "callback": "DM_callback"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "diagnosis",
+          "sub_var": "icd9code",
+          "class": "col_itm",
+          "callback": "DM_callback"
+        }
+      ]
+    }
+  },
+  "dbsource": {
+    "target": "id_tbl",
+    "sources": {
+      "mimic": [
+        {
+          "table": "icustays",
+          "val_var": "dbsource",
+          "class": "col_itm"
+        }
+      ]
+    }
   }
 }
