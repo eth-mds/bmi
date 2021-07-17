@@ -150,8 +150,9 @@
           "sub_var": "pharmaid",
           "ids": [1000785,1000804,1000216,1000573,1001029,1000731,1001066,1000665],
           "dur_var": "enteredentryat",
+          "group_var": "infusionid",
           "target": "ts_tbl",
-          "callback": "ts_to_win_2hours"
+          "callback": "hirid_pharma_win2"
         }
       ],
       "eicu": [
@@ -178,6 +179,7 @@
           "sub_var": "drugname",
           "regex": ["37.5 g tube"],
           "dur_var": "drugstopoffset",
+          "val_var": "medicationid",
           "class": "rgx_itm"
         }
       ]
@@ -223,8 +225,9 @@
           "ids": [1000714,1000805,1000806,1000807,1000852,1000558,1000559,
             1000560,1000561,1000694],
           "dur_var": "enteredentryat",
+          "group_var": "infusionid",
           "target": "ts_tbl",
-          "callback": "ts_to_win_2hours"
+          "callback": "hirid_pharma_win2"
         }
       ],
       "eicu": [
@@ -251,6 +254,7 @@
           "sub_var": "drugname",
           "regex": ["Parenteral Nutrition"],
           "dur_var": "drugstopoffset",
+          "val_var": "medicationid",
           "class": "rgx_itm"
         }
       ]
@@ -277,7 +281,7 @@
           "class": "rgx_itm",
           "dur_var": "enddate",
           "target": "ts_tbl",
-          "callback": "ts_to_win_6hours"
+          "callback": "mimic_presc_cort"
         }
       ],
       "aumc": [
@@ -295,8 +299,9 @@
           "ids": [1000383, 1000770, 1000431, 1000432, 1000433, 1000434, 1000435,
             1000486, 1000487, 1000488, 151, 146, 1000929, 1000325, 1000769],
           "dur_var": "enteredentryat",
+          "group_var": "infusionid",
           "target": "ts_tbl",
-          "callback": "ts_to_win_6hours"
+          "callback": "hirid_pharma_win6"
         }
       ],
       "eicu": [
@@ -314,6 +319,7 @@
           "sub_var": "drugname",
           "regex": ["hydrocortisone|prednisone|methylprednisolone|solumedrol|solu-medrol|dexamethasone"],
           "dur_var": "drugstopoffset",
+          "val_var": "medicationid",
           "class": "rgx_itm"
         }
       ]

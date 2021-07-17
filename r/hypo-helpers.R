@@ -580,25 +580,3 @@ hypo_only <- function(src, patient_ids, upto) {
   id_col(hypo(src, patient_ids, upto = upto))
   
 }
-
-map_beta_200 <- function (..., match_win = hours(2L), beta = 200, 
-                          interval = NULL) {
-  
-  cnc <- c("map", "norepi_equiv")
-  res <- ricu:::collect_dots(cnc, interval, ...)
-  
-  assert_that(ricu:::is_interval(match_win), match_win > ricu:::check_interval(res))
-  
-  on12 <- paste(meta_vars(res[[1L]]), "==", meta_vars(res[[2L]]))
-  on21 <- paste(meta_vars(res[[2L]]), "==", meta_vars(res[[1L]]))
-  res <- rbind(res[[1L]][res[[2L]], on = on12, roll = match_win],
-               res[[2L]][res[[1L]], on = on21, roll = match_win])
-  res <- unique(res)
-  res[is.na(get(cnc[2L])), cnc[2L]] <- 0 # impute a 0 value for vasos where needed
-  
-  res <- res[!is.na(get(cnc[1L])) & !is.na(get(cnc[2L])), ]
-  res <- res[, `:=`(c(paste0("map_beta", beta)), get(cnc[1L]) - 
-                                                 beta*get(cnc[2L]))]
-  res <- rm_cols(res, cnc)
-  res
-}
