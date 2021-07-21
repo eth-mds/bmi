@@ -15,8 +15,8 @@ conc_val <- function(cnc, src) {
   tbl <- tbl[get(id_var(tbl)) %in% coh]
   prop <- length(unique(id_col(tbl))) / length(coh)
   
-  # need to fix the duration of treatment -> using expand()!
-  tbl <- expand(tbl, aggregate = TRUE)
+  if (is_win_tbl(tbl))
+    tbl <- expand(tbl, aggregate = TRUE)
   tbl <- tbl[, list(total = .N), by = c(id_vars(tbl))]
   tbl <- merge(tbl, load_concepts("los_icu", src), all.x = TRUE)
    
@@ -27,7 +27,7 @@ conc_val <- function(cnc, src) {
 
 res <- NULL
 src <- c("mimic", "eicu", "hirid", "aumc")
-for (c in c("TPN", "enteral", "cortico")) {
+for (c in c("cortico", "TPN", "enteral", "dex_amount")) {
   
   for (dsrc in src) {
     
@@ -45,7 +45,8 @@ for (c in c("TPN", "enteral", "cortico")) {
 
 prop <- ggplot(res, aes(x = concept, y = prop, fill = source)) +
   geom_col(position = "dodge") + theme_bw() +
-  xlab("Concept") + ylab("% treated") + ggtitle("Proportion of treated patients")
+  xlab("Concept") + ylab("% treated") + 
+  ggtitle("Proportion of treated patients")
 
 dur <- ggplot(res, aes(x = concept, y = dpd, fill = source)) +
   geom_col(position = "dodge") + theme_bw() +
@@ -53,3 +54,11 @@ dur <- ggplot(res, aes(x = concept, y = dpd, fill = source)) +
   ggtitle("Median duration of treatment per day of patient stay")
 
 cowplot::plot_grid(prop, dur, ncol = 2L)
+
+# density plot
+src <- c("mimic", "eicu", "hirid", "aumc")
+dex <- load_concepts("dex_amount", src, 
+                     patient_ids = lapply(config("cohort"), `[[`, "insulin"))
+
+ggplot(dex[source != "eicu"], aes(x = dex_amount, fill = source)) + 
+  geom_density(alpha = 0.4) + theme_bw() #+ xlim(c(0, 10))

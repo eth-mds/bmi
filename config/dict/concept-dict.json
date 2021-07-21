@@ -289,7 +289,8 @@
           "table": "drugitems",
           "sub_var": "itemid",
           "ids": [7160, 10628, 6922, 8132, 6995],
-          "dur_var": "stop"
+          "dur_var": "stop",
+          "callback": "aumc_cortico"
         }
       ],
       "hirid": [
@@ -364,16 +365,97 @@
       ]
     }
   },
-  "dbsource": {
+  "version": {
     "target": "id_tbl",
     "sources": {
       "mimic": [
         {
           "table": "icustays",
           "val_var": "dbsource",
+          "class": "col_itm",
+          "callback": "mimic_version"
+        }
+      ],
+      "mimic_demo": [
+        {
+          "table": "icustays",
+          "val_var": "dbsource",
+          "class": "col_itm",
+          "callback": "mimic_version"
+        }
+      ],
+      "eicu_demo": [
+        {
+          "table": "patient",
+          "val_var": "age",
+          "class": "col_itm",
+          "callback": "gen_version"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "patient",
+          "val_var": "age",
+          "class": "col_itm",
+          "callback": "gen_version"
+        }
+      ],
+      "hirid": [
+        {
+          "table": "general",
+          "val_var": "discharge_status",
+          "class": "col_itm",
+          "callback": "gen_version"
+        }
+      ],
+      "aumc": [
+        {
+          "table": "admissions",
+          "val_var": "admissionyeargroup",
+          "class": "col_itm",
+          "callback": "aumc_version"
+        }
+      ]
+    }
+  },
+  "careunit": {
+    "target": "id_tbl",
+    "sources": {
+      "mimic": [
+        {
+          "table": "icustays",
+          "val_var": "first_careunit",
+          "class": "col_itm"
+        }
+      ],
+      "mimic_demo": [
+        {
+          "table": "icustays",
+          "val_var": "first_careunit",
           "class": "col_itm"
         }
       ]
     }
+  },
+  "dex_amount": {
+    "concepts": ["dex"],
+    "description": "Dextrose (amount)",
+    "callback": "dex_amount_callback",
+    "class": "rec_cncpt",
+    "target": "ts_tbl"
+  },
+  "liver_damage": {
+    "concepts": ["ast", "alt", "bili"],
+    "description": "Liver damage (indicator)",
+    "callback": "liver_damage_callback",
+    "class": "rec_cncpt",
+    "target": "ts_tbl"
+  },
+  "shock": {
+    "concepts": ["map", "dopa_rate", "norepi_rate", "dobu_rate", "epi_rate"],
+    "description": "Shock state (indicator)",
+    "callback": "shock_callback",
+    "class": "rec_cncpt",
+    "target": "ts_tbl"
   }
 }

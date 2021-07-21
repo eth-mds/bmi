@@ -50,6 +50,12 @@ hirid_pharma_win2 <- function(x, dur_var, group_var, ...) {
   as_win_tbl(x, dur_var = dur_var, by_ref = TRUE)
 }
 
+aumc_cortico <- function(x, dur_var, ...) {
+  
+  x[, c(dur_var) := get(dur_var) + mins(360L)]
+  
+}
+
 DM_callback <- function(x, ...) {
   
   sub_var <- setdiff(names(x), meta_vars(x))
@@ -149,3 +155,56 @@ elix_callback <- function(x, ...) {
   res
 }
 
+dex_amount_callback <- function(...) {
+  x <- list(...)[["dex"]]
+  ivl <- list(...)[["interval"]]
+  c_fct <- as.double(ivl, units = units(x$dur_var))
+  # make into amount
+  x[, dex := dex * as.double(dur_var) / c_fct]
+  x[, distr := as.double(ricu:::re_time(dur_var, ivl)) + 1]
+  x[, dex := dex / distr]
+  x[, distr := NULL]
+  x <- rename_cols(x, "dex_amount", "dex")
+  
+  expand(x, aggregate = "sum")
+}
+
+liver_damage_callback <- function(..., interval) {
+  
+  liv_dam <- Reduce(function(x, y) merge(x, y, all = TRUE), list(...))
+  liv_dam[, liver_damage := as.integer(bili > 2 | alt > 45 | ast > 45)]
+  liv_dam[is.na(liver_damage), liver_damage := 0]
+  liv_dam <- liv_dam[, c(meta_vars(liv_dam), "liver_damage"), with = FALSE]
+  
+  liv_dam
+  
+}
+
+shock_callback <- function(..., interval) {
+  
+  shock <- Reduce(function(x, y) merge(x, y, all = TRUE), list(...))
+  shock[, shock := as.integer(any(!is.na(dopa_rate), !is.na(dobu_rate),
+                                  !is.na(epi_rate), !is.na(norepi_rate), 
+                                  map < 60)),
+        by = eval(meta_vars(shock))]
+  shock[, c(meta_vars(shock), "shock"), with = FALSE]
+  
+}
+
+mimic_version <- function(x, val_var, ...) {
+  
+  x[, c(val_var) := ifelse(get(val_var) == "metavision", "new", "old")]
+  
+}
+
+aumc_version <- function(x, val_var, ...) {
+  
+  x[, c(val_var) := ifelse(get(val_var) == "2010-2016", "new", "old")]
+  
+}
+
+gen_version <- function(x, val_var, ...) {
+  
+  x[, c(val_var) := "new"]
+  
+}
