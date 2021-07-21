@@ -1,74 +1,4 @@
 
-liver_damage <- function(data_source = "mimic", id_type = "icustay",
-                         patient_ids = NULL, verbose = FALSE){
-
-  liv_dam <- load_concepts(
-    c("bili", "alt", "ast"), src = data_source,
-    id_type = id_type, patient_ids = patient_ids, verbose = verbose
-  )
-  liv_dam[, liver_damage := as.integer(bili > 2 | alt > 45 | ast > 45)]
-  liv_dam <- liv_dam[, c(meta_vars(liv_dam), "liver_damage"), with = FALSE]
-
-  liv_dam
-}
-
-shock <- function(data_source = "mimic", id_type = "icustay",
-                  patient_ids = NULL, verbose = FALSE) {
-
-  x <- load_concepts(c("dopa_rate", "norepi_rate", "dobu_rate", "epi_rate", "map"),
-    data_source, id_type = id_type, patient_ids = patient_ids, verbose = verbose)
-
-  if (data_source == "hirid") x[, dopa := NA]
-
-  x <- x[, c(meta_vars(x), "dopa_rate", "norepi_rate", "dobu_rate", "epi_rate",
-             "map"), with = FALSE]
-  x[is.na(map), "map"] <- 100
-
-  shock <- x[, as.integer(any(!is.na(dopa_rate), !is.na(dobu_rate),
-                              !is.na(epi_rate), !is.na(norepi_rate), map < 60)),
-             by = eval(meta_vars(x))]
-  shock <- data.table::setnames(shock, "V1", "shock")
-  shock <- shock[shock == 1]
-
-  return(shock)
-}
-
-mech_vent <- function(data_source = "mimic", id_type = "icustay",
-                      patient_ids = NULL, verbose = FALSE) {
-
-  mechv <- ricu:::sofa_vent(
-    load_concepts("vent_start", data_source, id_type = id_type,
-                  patient_ids = patient_ids, verbose = verbose),
-    load_concepts("vent_end", data_source, id_type = id_type,
-                  patient_ids = patient_ids, verbose = verbose),
-    hours(6L), hours(2L), hours(1L)
-  )
-
-  mechv[, mech_vent := as.integer(vent)]
-  mechv <- mechv[, c(meta_vars(mechv), "mech_vent"), with = FALSE]
-
-  return(mechv)
-}
-
-load_ood <- function(data_source, concepts, id_type = "icustay", patient_ids = NULL) {
-
-  res <- list()
-
-  for(i in 1:length(concepts)) {
-
-    f <- eval(parse(text = (concepts[i])))
-    res[[i]] <- f(data_source, id_type = id_type, patient_ids = patient_ids)
-
-  }
-
-  if (length(res) == 1) return(res[[1]])
-
-  res <- Reduce(function(x, y) merge(x, y, all = TRUE), res)
-
-  return(res)
-
-}
-
 collect_hypo_cases <- function(tbl, max.hour = 240L) {
   # carry the hypo time backwards for 6 hours
   tbl <- slide(tbl, before = hours(0L), after = hours(5L), hypo_LA := max(hypo))
@@ -96,34 +26,28 @@ collect_hypo_cases <- function(tbl, max.hour = 240L) {
 glycemia_treatment <- function(data_source,
   vars = list(glu = list(time = 24L, imp_val = NA_real_),
     lact = list(time = 24L, imp_val = 1), ins = list(time = 12L, imp_val = 0),
-    shock = list(time = 24L, imp_val = 0),
-    liver_damage = list(time = 48L, imp_val = 0)), fill_na = FALSE,
-    id_type = "icustay", patient_ids = NULL, hypo = TRUE, hypo.threshold = 3.9,
-    sofa = TRUE, verbose = FALSE) {
-
-  dict <- ricu::get_config("concept-dict", ricu:::default_config_path())
-
-  in_dict <- intersect(names(vars), names(dict))
-  out_dict <- setdiff(names(vars), in_dict)
-  tbl1 <- load_concepts(in_dict, data_source, id_type = id_type,
-                        patient_ids = patient_ids, verbose = verbose)
-
-  if (length(out_dict) > 0L) {
-    tbl2 <- load_ood(data_source, out_dict, id_type = id_type,
-                     patient_ids = patient_ids)
-    tbl <- merge(tbl1, tbl2, all = TRUE)
-  } else {
-    tbl <- tbl1
-  }
+    bmi = list(time = 0L, imp_val = NA), shock = list(time = 24L, imp_val = 0)), 
+  fill_na = FALSE, patient_ids = NULL, hypo = TRUE, hypo.threshold = 3.9,
+  sofa = FALSE, verbose = FALSE) {
+  
+  stat <- intersect(names(vars), c("bmi", "weight", "height", "age"))
+  dyn <- setdiff(names(vars), stat)
+  tbl <- load_concepts(dyn, data_source, patient_ids = patient_ids, 
+                       verbose = verbose)
+  static <- load_concepts(stat, data_source, patient_ids = patient_ids, 
+                          verbose = verbose)
 
   if (data_source == "mimic" & is.element("ins", names(tbl))) {
     tbl[ins == 0, "ins"] <- 2 # MIMIC carevue imputation
   } 
-  # reorder the columns appropriately
-  tbl <- tbl[, c(meta_vars(tbl), names(vars)), with = FALSE]
+  
 
   # fill gaps
   tbl <- fill_gaps(tbl)
+  tbl <- merge(tbl, static, all.x = TRUE)
+  # reorder the columns appropriately
+  tbl <- tbl[, c(meta_vars(tbl), names(vars)), with = FALSE]
+  # carry-forward as specified
   tbl <- carry_values(tbl, vars)
 
   # fill NAs after the carry-forward if specified
@@ -140,9 +64,6 @@ glycemia_treatment <- function(data_source,
     
     cmp <- c("sofa_coag_comp", "sofa_renal_comp", "sofa_cns_comp", 
              "sofa_resp_comp")
-    # cmp <- "sofa_mlc"
-    # sofa[, sofa_mlc := sofa_coag_comp + sofa_renal_comp + sofa_cns_comp +
-    #                    sofa_resp_comp]
     sofa <- sofa[, c(meta_vars(sofa), cmp), with = FALSE]
     tbl <- merge(tbl, sofa, all.x = TRUE)
     if (fill_na) tbl <- replace_na(tbl, 0L, vars = cmp)
@@ -161,19 +82,98 @@ glycemia_treatment <- function(data_source,
   return(tbl)
 }
 
-tw_avg_glucose <- function(source, upto,
-                           patient_ids = config("cohort")[[source]][["bmi"]]) {
-
-  x <- fill_gaps(load_concepts("glu", source, patient_ids = patient_ids, 
-                               verbose = F))
-  x[, glu := data.table::nafill(glu, "locf"), by = eval(id_vars(x))]
-
-  wins <- stay_windows(source)
-  x <- merge(x, wins)
+tw_avg <- function(cnc, source, upto, hypo_censoring = TRUE,
+                   patient_ids = config("cohort")[[source]][["bmi"]]) {
+  
+  x <- load_concepts(cnc, source, patient_ids = patient_ids, 
+                     verbose = F)
+  limits <- merge(x[, list(first_obs = min(get(index_var(x)))), 
+                    by = c(id_vars(x))], 
+                  stay_windows(source))
+  limits[, start := pmin(start, first_obs)]
+  if (hypo_censoring) {
+    hg <- hypo(source, patient_ids, upto = hours(Inf))
+    hg <- rename_cols(hg, "hypo_time", index_var(hg))
+    hg <- as_id_tbl(hg)
+    limits <- merge(limits, hg, all.x = TRUE)
+    limits[, end := pmin(end, hypo_time - hours(1L))]
+  }
+  
+  x <- fill_gaps(x, limits = limits)
+  x[, c(cnc) := data.table::nafill(get(cnc), "locf"), by = eval(id_vars(x))]
+  
   x[get(index_var(x)) >= 0L & get(index_var(x)) <= upto]
 
-  x[, list(target = mean(glu, na.rm = T)), by = eval(id_vars(x))]
+  x[, list(target = mean(get(cnc), na.rm = T)), by = eval(id_vars(x))]
 
+}
+
+tw_avg_0imp <- function(cnc, source, upto, hypo_censoring = TRUE,
+                       patient_ids = config("cohort")[[source]][["bmi"]]) {
+  
+  x <- load_concepts(cnc, source, patient_ids = patient_ids, 
+                     verbose = F)
+  limits <- merge(x[, list(first_obs = min(get(index_var(x)))), 
+                    by = c(id_vars(x))], 
+                  stay_windows(source))
+  limits[, start := pmin(start, first_obs)]
+  if (hypo_censoring) {
+    hg <- hypo(source, patient_ids, upto = hours(Inf))
+    hg <- rename_cols(hg, "hypo_time", index_var(hg))
+    hg <- as_id_tbl(hg)
+    limits <- merge(limits, hg, all.x = TRUE)
+    limits[, end := pmin(end, hypo_time - hours(1L))]
+  }
+  
+  x <- fill_gaps(x, limits = limits)
+  x[is.na(get(cnc)), c(cnc) := 0]
+  
+  x[get(index_var(x)) >= 0L & get(index_var(x)) <= upto]
+  
+  targ <- x[, list(target = mean(get(cnc), na.rm = T)), by = eval(id_vars(x))]
+  
+  ful <- id_tbl(patient_ids)
+  ful <- rename_cols(ful, id_var(targ), id_var(ful))
+  ful <- merge(ful, targ, all.x = TRUE)
+  ful[is.na(target), target := 0]
+  
+  ful
+  
+}
+
+med_dur <- function(cnc, source, upto, hypo_censoring = TRUE,
+                   patient_ids = config("cohort")[[source]][["bmi"]]) {
+  
+  x <- load_concepts(cnc, source, patient_ids = patient_ids, 
+                     verbose = F)
+  limits <- merge(x[, list(first_obs = min(get(index_var(x)))), 
+                    by = c(id_vars(x))], 
+                  stay_windows(source))
+  limits[, start := pmin(start, first_obs)]
+  if (hypo_censoring) {
+    hg <- hypo(source, patient_ids, upto = hours(Inf))
+    hg <- rename_cols(hg, "hypo_time", index_var(hg))
+    hg <- as_id_tbl(hg)
+    limits <- merge(limits, hg, all.x = TRUE)
+    limits[, end := pmin(end, hypo_time - hours(1L))]
+  }
+  
+  if (is_win_tbl(x)) x <- expand(x, aggregate = TRUE)
+  if (is.logical(x[[cnc]])) x[, c(cnc) := as.double(get(cnc))]
+  x <- fill_gaps(x, limits = limits)
+  x[is.na(get(cnc)), c(cnc) := 0]
+  
+  x[get(index_var(x)) >= 0L & get(index_var(x)) <= upto]
+  
+  targ <- x[, list(target = mean(get(cnc), na.rm = T)), by = eval(id_vars(x))]
+  
+  ful <- id_tbl(patient_ids)
+  ful <- rename_cols(ful, id_var(targ), id_var(ful))
+  ful <- merge(ful, targ, all.x = TRUE)
+  ful[is.na(target), target := 0]
+  
+  ful
+  
 }
 
 glu_freq <- function(source, upto,
@@ -198,8 +198,24 @@ get_target <- function(source, target, upto, patient_ids) {
 
   if (target == "tw_avg_glucose") {
 
-    res <- tw_avg_glucose(source, upto, patient_ids)
+    res <- tw_avg("glu", source, upto, patient_ids = patient_ids)
 
+  } else if (target == "dur_TPN") {
+    
+    res <- med_dur("TPN", source, upto, patient_ids = patient_ids)
+    
+  } else if (target == "dur_enteral") {
+    
+    res <- med_dur("enteral", source, upto, patient_ids = patient_ids)
+    
+  } else if (target == "dur_cortico") {
+    
+    res <- med_dur("cortico", source, upto, patient_ids = patient_ids)
+    
+  } else if (target == "tw_avg_dextrose") {
+    
+    res <- tw_avg_0imp("dex_amount", source, upto, patient_ids = patient_ids)
+    
   } else if (target == "max_insulin") {
 
     res <- w_value(source, "ins", dir = "increasing", upto = upto,
@@ -270,90 +286,6 @@ get_target <- function(source, target, upto, patient_ids) {
 
   res
 
-}
-
-cox_treatment <- function(data_source,
-                          vars = list(
-                            glu = list(type = "locf", imp_val = NA,
-                                       before_val = 108),
-                            lact = list(type = "locf", imp_val = NA,
-                                        before_val = 1),
-                            ins = list(type = "const", imp_val = 0,
-                                       before_val = 0),
-                            shock = list(type = "locf", imp_val = NA,
-                                         before_val = 0),
-                            liver_damage = list(type = "locf", imp_val = NA,
-                                                before_val = 0L),
-                            death = list(type = "const", imp_val = FALSE,
-                                         before_val = 0L)),
-                          id_type = "icustay", patient_ids = NULL, fill_gaps = T,
-                          hypo.threshold = 3.9, verbose = FALSE) {
-
-  dict <- ricu::get_config("concept-dict", ricu:::default_config_path())
-
-  in_dict <- intersect(names(vars), names(dict))
-  out_dict <- setdiff(names(vars), in_dict)
-  tbl1 <- load_concepts(in_dict, data_source, id_type = id_type,
-                        patient_ids = patient_ids, verbose = verbose)
-
-  if (length(out_dict) > 0L) {
-    tbl2 <- load_ood(data_source, out_dict, id_type = id_type,
-                     patient_ids = patient_ids)
-    tbl <- merge(tbl1, tbl2, all = TRUE)
-  } else {
-    tbl <- tbl1
-  }
-
-  if (data_source == "mimic" & is.element("ins", names(tbl))) tbl[ins == 0,
-                                                                  "ins"] <- 2
-  # reorder the columns appropriately
-  tbl <- tbl[, c(meta_vars(tbl), names(vars)), with = FALSE]
-
-  # fill gaps
-  if (fill_gaps) tbl <- fill_gaps(tbl)
-  dat <- replace_na(tbl, sapply(vars, `[[`, "imp_val"),
-                    type = sapply(vars, `[[`, "type"),
-                    by_ref = TRUE,
-                    vars = names(vars),
-                    by = id_vars(tbl))
-
-
-  dat <- replace_na(dat, sapply(vars, `[[`, "before_val"),
-                    type = rep("const", length(vars)),
-                    by_ref = TRUE,
-                    vars = names(vars),
-                    by = id_vars(dat))
-
-  dat <- merge(dat, load_concepts("bmi", data_source, verbose = verbose),
-               all.x = T)
-
-  dat <- merge(dat, stay_windows(data_source), all.x = T)
-  dat <- dat[get(index_var(dat)) >= start &
-             get(index_var(dat)) <= end]
-  dat <- dat[, c("start", "end") := NULL]
-
-  ns_coh <- unique(id_col(dat[death == T]))
-  dat <- dat[,
-             end := shift(get(index_var(dat)), n = -1L, fill = NA,
-                            type = "lag"), by = c(id_vars(dat))]
-
-  dat <- dat[get(id_vars(dat)) %in% ns_coh,
-             death := shift(death, n = -1L, fill = NA,
-                            type = "lag"), by = c(id_vars(dat))]
-
-
-  # fill NAs after locf
-
-  dat <- dat[, head(.SD, n = match(TRUE, death, .N)), by = c(id_vars(dat))]
-
-  # get hypo
-  dat[, hypo := as.integer(glu <= hypo.threshold * 18.016)]
-  dat[, hypo := cummax(hypo), by = c(id_vars(dat))]
-
-  # scale glucose for better interpretability
-  dat <- dat[, glu := glu / 18.016]
-
-  return(dat)
 }
 
 high_freq <- function(src, patient_ids, upto) {
