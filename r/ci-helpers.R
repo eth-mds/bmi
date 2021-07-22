@@ -64,6 +64,10 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
   
   ret[["lower"]] <- sapply(ret[["V2"]], `[[`, 1L)
   ret[["upper"]] <- sapply(ret[["V2"]], `[[`, 2L)
+  if (any(ret[["lower"]] < 0)) {
+    cat("Concept", y, "has a CI with lower end < 0; Fixing this\n")
+    ret[lower < 0, lower := 0]
+  }
   
   ret <- ret[, c(x, "V1", "lower", "upper", "Feature", z), with=FALSE]
   data.table::setnames(ret, x, "meanval")

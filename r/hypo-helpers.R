@@ -96,6 +96,7 @@ tw_avg <- function(cnc, source, upto, hypo_censoring = TRUE,
     hg <- rename_cols(hg, "hypo_time", index_var(hg))
     hg <- as_id_tbl(hg)
     limits <- merge(limits, hg, all.x = TRUE)
+    limits[is.na(hypo_time), hypo_time := hours(Inf)]
     limits[, end := pmin(end, hypo_time - hours(1L))]
   }
   
@@ -122,6 +123,7 @@ tw_avg_0imp <- function(cnc, source, upto, hypo_censoring = TRUE,
     hg <- rename_cols(hg, "hypo_time", index_var(hg))
     hg <- as_id_tbl(hg)
     limits <- merge(limits, hg, all.x = TRUE)
+    limits[is.na(hypo_time), hypo_time := hours(Inf)]
     limits[, end := pmin(end, hypo_time - hours(1L))]
   }
   
@@ -155,6 +157,7 @@ med_dur <- function(cnc, source, upto, hypo_censoring = TRUE,
     hg <- rename_cols(hg, "hypo_time", index_var(hg))
     hg <- as_id_tbl(hg)
     limits <- merge(limits, hg, all.x = TRUE)
+    limits[is.na(hypo_time), hypo_time := hours(Inf)]
     limits[, end := pmin(end, hypo_time - hours(1L))]
   }
   

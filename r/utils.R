@@ -391,12 +391,12 @@ POC_table <- function(poc, table.names, path) {
 
   for (src in names(poc)) {
 
-    res <- Reduce(function(x, y) merge(x, y, by = "group", sort = F), poc[[src]])
+    res <- Reduce(function(x, y) merge(x, y, by = "group", sort = F),
+                  poc[[src]])
     names(res) <- table.names
 
     my_doc <- body_add(my_doc, srcwrap(src), style = "heading 1")
     my_doc <- my_doc %>% body_add_table(res, style = "table_template")
-    my_doc <- body_add_break(my_doc)
 
   }
 
@@ -411,12 +411,11 @@ PO_char <- function(src, target, breaks = config("bmi-bins")[["who"]],
   
   tbl <- merge(
     get_target(src, target, upto = hours(Inf), patient_ids = patient_ids),
-    load_concepts("bmi", src, patient_ids = patient_ids)
+    load_concepts("bmi", src, patient_ids = patient_ids), all.x = TRUE
   )
   
   tbl[, bins := .bincode(bmi, breaks = c(-Inf, breaks, Inf))]
-  
-  res <- tbl[, mean(get(target)), by = "bins"]
+  res <- tbl[, mean(get(target), na.rm = TRUE), by = "bins"]
   res <- data.table::setnames(res, "V1", target)
   res <- data.table::setorderv(res, "bins")
   res[["group"]] <- paste("BMI", bin_labels(breaks, "kg/m2"))
