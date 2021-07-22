@@ -9,6 +9,7 @@ library(officer)
 library(assertthat)
 library(boot)
 library(data.table)
+library(icd)
 
 root <- rprojroot::find_root(rprojroot::has_file(".gitignore"))
 r_dir <- file.path(root, "r")
@@ -27,46 +28,11 @@ figures <- list(
     pos.x = 0.2,
     pos.y = 0.8
   ),
-  death = list(
-    title = "Mortality by dataset",
-    y_label = "Mortality (proportion)",
-    coh = "bmi",
-    pos.x = 0.7,
-    pos.y = 0.8
-  ),
   hypo = list(
     title = "Hypoglycemia prevalence by dataset",
     y_label = "Hypoglycemic propensity (proportion)",
     coh = "bmi",
     pos.x = 0.5,
-    pos.y = 0.8
-  ),
-  max_insulin = list(
-    title = "Insulin rate by dataset",
-    y_label = "Maximal insulin rate (U/h)",
-    coh = "insulin",
-    pos.x = 0.2,
-    pos.y = 0.8
-  ),
-  max_insulin_wnorm = list(
-    title = "Weight-normalized insulin by dataset",
-    y_label = "Weight-norm. max. insulin rate (U/(h*kg))",
-    coh = "insulin",
-    pos.x = 0.3,
-    pos.y = 0.8
-  ),
-  glu_freq = list(
-    title = "Frequency of glucose measurements by dataset",
-    y_label = "Mean time between gluc. measurements (h)",
-    coh = "bmi",
-    pos.x = 0.4,
-    pos.y = 0.5
-  ),
-  fhm = list(
-    title = "Value of first hypoglycemic measurement by dataset",
-    y_label = "Blood glucose (mg/dL)",
-    coh = "bmi",
-    pos.x = 0.4,
     pos.y = 0.8
   ),
   hypo = list(
@@ -75,6 +41,13 @@ figures <- list(
     coh = "bmi",
     subset_fn = high_freq,
     pos.x = 0.5,
+    pos.y = 0.8
+  ),
+  death = list(
+    title = "Mortality by dataset",
+    y_label = "Mortality (proportion)",
+    coh = "bmi",
+    pos.x = 0.7,
     pos.y = 0.8
   ),
   death = list(
@@ -95,19 +68,20 @@ figures <- list(
     pos.x = 0.6,
     pos.y = 0.8
   ),
-  twavg_cond_death = list(
-    title = "Time-weighted glucose by in-hospital survival",
-    y_label = "Time-weighted glucose (mg/dL)",
+  glu_freq = list(
+    title = "Frequency of glucose measurements by dataset",
+    y_label = "Mean time between gluc. measurements (h)",
     coh = "bmi",
-    z_cond = "death",
-    z_cond_name = "In-hospital death",
-    z_cond_labels = c("FALSE", "TRUE"),
-    pos.x = 0.2,
+    pos.x = 0.4,
+    pos.y = 0.5
+  ),
+  fhm = list(
+    title = "Value of first hypoglycemic measurement by dataset",
+    y_label = "Blood glucose (mg/dL)",
+    coh = "bmi",
+    pos.x = 0.4,
     pos.y = 0.8
-  )
-)
-
-figures <- list(
+  ),
   hypo_cond_diab = list(
     title = "Hypoglycemia for Diabetic vs. Non-diabetic",
     y_label = "Hypoglycemia (proportion)",
@@ -147,35 +121,73 @@ figures <- list(
     z_cond_labels = c("Medical", "Surgical", "Other"),
     pos.x = 0.6,
     pos.y = 0.8
+  ),
+  max_insulin = list(
+    title = "Insulin rate by dataset",
+    y_label = "Maximal insulin rate (U/h)",
+    coh = "insulin",
+    pos.x = 0.2,
+    pos.y = 0.8
+  ),
+  max_insulin_wnorm = list(
+    title = "Weight-normalized insulin by dataset",
+    y_label = "Weight-norm. max. insulin rate (U/(h*kg))",
+    coh = "insulin",
+    pos.x = 0.3,
+    pos.y = 0.8
+  ),
+  dur_TPN = list(
+    title = "Total parenteral nutrition duration",
+    y_label = "Mean proportion of time treated",
+    coh = "insulin",
+    pos.x = 0.6,
+    pos.y = 0.8
+  ),
+  dur_enteral = list(
+    title = "Enteral nutrition duration",
+    y_label = "Mean proportion of time treated",
+    coh = "insulin",
+    pos.x = 0.6,
+    pos.y = 0.8
+  ),
+  dur_cortico = list(
+    title = "Corticosteroids duration",
+    y_label = "Mean proportion of time treated",
+    coh = "insulin",
+    pos.x = 0.6,
+    pos.y = 0.8
+  ),
+  tw_avg_dextrose = list(
+    title = "Average dextrose infusion rate",
+    y_label = "Infusion rate (ml/hour)",
+    coh = "insulin",
+    pos.x = 0.6,
+    pos.y = 0.8
   )
 )
 
 # conditional, multi-source plots
-age_binning <- function(x) 
+age_binning <- function(x)
   .bincode(x, c(-Inf, quantile(x, c(0.25, 0.5, 0.75), na.rm = FALSE), Inf))
 
-bin_binning <- function(x) .bincode(x, c(-Inf, 0.5, Inf))
+diab_src <- c("mimic", "eicu")
+binary_binning <- function(x) .bincode(x, c(-Inf, 0.5, Inf))
 
-adm_binning <- function(x) 
+figures[["hypo_cond_diab"]][["dat"]] <- CI_dat(diab_src, y = "hypo", z = "DM",
+                                               z_binning = binary_binning)
+figures[["death_cond_diab"]][["dat"]] <- CI_dat(diab_src, y = "death", z = "DM",
+                                                z_binning = binary_binning)
+
+adm_src <- c("mimic", "eicu", "aumc")
+adm_binning <- function(x)
   ifelse(x == "med", 1, ifelse(x == "surg", 2, NA))
-
-figures[["hypo_cond_diab"]][["dat"]] <- CI_dat(c("mimic"), y = "hypo", 
-                                               z = "DM", z_binning = bin_binning)
-figures[["death_cond_diab"]][["dat"]] <- CI_dat(c("mimic"), y = "death", 
-                                               z = "DM", z_binning = bin_binning)
-
-figures[["hypo_cond_adm"]][["dat"]] <- CI_dat(c("mimic"), y = "hypo", 
-                                               z = "adm", z_binning = adm_binning)
-figures[["death_cond_adm"]][["dat"]] <- CI_dat(c("mimic"), y = "death", 
-                                                z = "adm", z_binning = adm_binning)
+figures[["hypo_cond_adm"]][["dat"]] <- CI_dat(adm_src, y = "hypo", z = "adm",
+                                              z_binning = adm_binning)
+figures[["death_cond_adm"]][["dat"]] <- CI_dat(adm_src, y = "death", z = "adm",
+                                               z_binning = adm_binning)
 
 figures[["mort_cond_age"]][["dat"]] <- CI_dat(src, y = "death", z = "age",
                                               z_binning = age_binning)
-
-figures[["twavg_cond_death"]][["dat"]] <- CI_dat(src, 
-                                                 y = "tw_avg_glucose", 
-                                                 z = "death",
-                                                 z_binning = function(x) x)
 
 # unconditional, single-source plots
 for (i in 1:length(figures)) {
@@ -202,36 +214,52 @@ for (i in 1:length(figures)) {
 }
 
 # Figures
-Figure_2 <- cowplot::plot_grid(
+fig1 <- cowplot::plot_grid(
   figures[["tw_avg_glucose"]][["plot"]],
   figures[["death"]][["plot"]],
   figures[["mort_cond_age"]][["plot"]],
-  figures[["hypo"]][["plot"]], 
+  figures[["hypo"]][["plot"]],
   labels = c("a)", "b)", "c)", "d)"), 
   ncol = 2L
 )
 
 # ggsave(file.path(root, "4files-BMI", "figures", "Figure2.tiff"), 
-#        plot = Figure_2, width = 18, height = 12)
+#        plot = fig1, width = 18, height = 12)
 
-eFigure_1 <- cowplot::plot_grid(
-  figures[[8L]][["plot"]],
-  figures[["twavg_cond_death"]][["plot"]],
-  figures[["max_insulin"]][["plot"]],
-  figures[["max_insulin_wnorm"]][["plot"]], labels = c("a)", "b)", "c)", "d)"), 
+fig2 <- cowplot::plot_grid(
+  figures[["mort_cond_adm"]][["plot"]],
+  figures[["mort_cond_diab"]][["plot"]],
+  figures[["hypo_cond_adm"]][["plot"]],
+  figures[["hypo_cond_diab"]][["plot"]],
+  labels = c("a)", "b)", "c)", "d)"), 
   ncol = 2L
 )
 
 # ggsave(file.path(root, "4files-BMI", "eSupplement", "eFigure1.tiff"), 
-#        plot = eFigure_1, width = 18, height = 12)
+#        plot = fig2, width = 18, height = 12)
 
-eFigure_2 <- cowplot::plot_grid(
+fig3 <- cowplot::plot_grid(
   figures[["glu_freq"]][["plot"]],
-  figures[[9L]][["plot"]],
+  figures[[3L]][["plot"]],
   figures[["fhm"]][["plot"]],
-  labels = c("a)", "b)", "c)"), 
+  figures[[5L]][["plot"]],
+  labels = c("a)", "b)", "c)", "d)"), 
   ncol = 3L
 )
 
 # ggsave(file.path(root, "4files-BMI", "eSupplement", "eFigure2.tiff"), 
-#        plot = eFigure_2, width = 24, height = 6)
+#        plot = fig3, width = 18, height = 12)
+
+fig4 <- cowplot::plot_grid(
+  figures[["max_insulin"]][["plot"]],
+  figures[["max_insulin_wnorm"]][["plot"]],
+  figures[["dur_TPN"]][["plot"]],
+  figures[["dur_enteral"]][["plot"]],
+  figures[["dur_cortico"]][["plot"]],
+  figures[["tw_avg_dextrose"]][["plot"]],
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)"), 
+  ncol = 2L
+)
+
+# ggsave(file.path(root, "4files-BMI", "eSupplement", "eFigure3.tiff"), 
+#        plot = fig4, width = 18, height = 18)
