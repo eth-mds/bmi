@@ -11,7 +11,7 @@ invisible(lapply(list.files(r_dir, full.names = TRUE), source))
 
 Sys.setenv(RICU_CONFIG_PATH = file.path(root, "config", "dict"))
 
-src <- c("mimic", "eicu", "hirid", "aumc") # c("mimic_demo", "eicu_demo") # 
+src <- c("aumc", "hirid", "mimic", "eicu") # c("mimic_demo", "eicu_demo") # 
 cnc <- c("crea", "lact", "bili", "plt", "pafi", "map", "gcs", "glu")
 coh <- lapply(src, function(x) config("cohort")[[x]][["insulin"]])
 names(coh) <- src
