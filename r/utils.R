@@ -213,7 +213,8 @@ fwrap <- function(feat) {
 
 diff_means <- function(d, ind, threshold) {
   use <- d[ind, ]
-  mean(!is.na(use[w_val > threshold, "hg"])) - mean(!is.na(use[w_val <= threshold, "hg"]))
+  mean(!is.na(use[w_val > threshold, "hg"])) - 
+    mean(!is.na(use[w_val <= threshold, "hg"]))
 }
 
 ate_sa <- function(d, ind, threshold) {
@@ -273,9 +274,11 @@ compute_plot <- function(tbl, condition, legend.source, x.pos, y.pos,
     data.table::setnames(df, condition, "mid")
 
     p <- ggplot(df, aes(x = lactbin, y = V1, color = mid)) +
-      geom_line(size = 3) + theme_bw(15) + ggtitle(srcwrap(unique(tbl[["dataset"]]))) +
+      geom_line(size = 3) + theme_bw(15) + 
+      ggtitle(srcwrap(unique(tbl[["dataset"]]))) +
       ylab("Glucose (mg/dL)") + xlab("Lactate (mmol/L)") +
-      scale_x_continuous(labels=bin_labels(lactate_bins, NULL), breaks = c(1:(length(lactate_bins)+1))) +
+      scale_x_continuous(labels=bin_labels(lactate_bins, NULL), 
+                         breaks = c(1:(length(lactate_bins)+1))) +
       guides(color=guide_legend(title=lwrap(condition)))
     if(grepl(legend.source, unique(tbl[["dataset"]]))) {
       p <- p + theme(legend.position = c(x.pos, y.pos),
@@ -293,8 +296,10 @@ sens_spec_table <- function(score, outcome, src) {
   sens <- spec <- NULL
   for(thresh in value_set) {
     pred <- as.integer(score >= thresh)
-    sens <- c(sens, paste0(round(100*sum(pred == 1 & outcome == 1) / sum(outcome == 1), 2), "%"))
-    spec <- c(spec, paste0(round(100*sum(pred == 0 & outcome == 0) / sum(outcome == 0), 2), "%"))
+    sens <- c(sens, paste0(round(100*sum(pred == 1 & outcome == 1) / 
+                                   sum(outcome == 1), 2), "%"))
+    spec <- c(spec, paste0(round(100*sum(pred == 0 & outcome == 0) / 
+                                   sum(outcome == 0), 2), "%"))
   }
 
   res <- as.data.frame(cbind(sens, spec), stringsAsFactors = F)
@@ -304,9 +309,11 @@ sens_spec_table <- function(score, outcome, src) {
   res
 }
 
-tw_glucose <- function(source, patient_ids = config("cohort")[[source]][["all"]]) {
+tw_glucose <- function(source, 
+                       patient_ids = config("cohort")[[source]][["all"]]) {
 
-  x <- fill_gaps(load_concepts("glu", source, patient_ids = patient_ids, verbose = F))
+  x <- fill_gaps(load_concepts("glu", source, patient_ids = patient_ids, 
+                               verbose = F))
   x[, glu := data.table::nafill(glu, "locf"), by = eval(id_var(x))]
 
   wins <- stay_windows(source)
@@ -316,9 +323,11 @@ tw_glucose <- function(source, patient_ids = config("cohort")[[source]][["all"]]
   x[, mean(glu, na.rm = T), by = eval(id_var(x))][["V1"]]
 }
 
-mean_glucose <- function(source, patient_ids = config("cohort")[[source]][["all"]]) {
+mean_glucose <- function(source, 
+                         patient_ids = config("cohort")[[source]][["all"]]) {
 
-  x <- fill_gaps(load_concepts("glu", source, patient_ids = patient_ids, verbose = F))
+  x <- fill_gaps(load_concepts("glu", source, patient_ids = patient_ids, 
+                               verbose = F))
   #x[, glu := data.table::nafill(glu, "locf"), by = eval(id_var(x))]
 
   wins <- stay_windows(source)
@@ -328,7 +337,9 @@ mean_glucose <- function(source, patient_ids = config("cohort")[[source]][["all"
   x[, mean(glu, na.rm = T), by = eval(id_var(x))][["V1"]]
 }
 
-insulin_days <- function(source, patient_ids = config("cohort")[[source]][["all"]], upto = hours(10*24)) {
+insulin_days <- function(source, 
+                         patient_ids = config("cohort")[[source]][["all"]], 
+                         upto = hours(10*24)) {
 
   wins <- stay_windows(source)
   patient_ids <- intersect(id_col(wins[!is.na(end)]), patient_ids)
@@ -343,7 +354,10 @@ insulin_days <- function(source, patient_ids = config("cohort")[[source]][["all"
   x <- merge(x, wins, all = T)
   x <- x[get(index_var(x)) >= start & get(index_var(x)) < end]
 
-  num_days <- sum(x[, length(unique(.bincode(get(index_var(x)), seq(-0.01, as.integer(upto)-24, 24)))), by = eval(id_var(x))][["V1"]])
+  num_days <- sum(
+    x[, length(unique(.bincode(get(index_var(x)), 
+                               seq(-0.01, as.integer(upto)-24, 24)))), 
+      by = eval(id_var(x))][["V1"]])
 
   res <- rep(FALSE, sum(wins[["num_days"]]))
   res[1:num_days] <- TRUE
@@ -402,7 +416,7 @@ PO_char <- function(src, target, breaks = config("bmi-bins")[["who"]],
   
   tbl[, bins := .bincode(bmi, breaks = c(-Inf, breaks, Inf))]
   
-  res <- tbl[, mean(target), by = "bins"]
+  res <- tbl[, mean(get(target)), by = "bins"]
   res <- data.table::setnames(res, "V1", target)
   res <- data.table::setorderv(res, "bins")
   res[["group"]] <- paste("BMI", bin_labels(breaks, "kg/m2"))

@@ -2,7 +2,10 @@ library(ricu)
 library(ggplot2)
 library(assertthat)
 
-source(file.path(rprojroot::find_root(".gitignore"), "utils", "utils-config.R"))
+root <- rprojroot::find_root(rprojroot::has_file(".gitignore"))
+r_dir <- file.path(root, "r")
+invisible(lapply(list.files(r_dir, full.names = TRUE), source))
+Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 
 # filter for age on MIMIC-III
 mimic <- load_concepts(c("age", "bmi"), "mimic", verbose = F)
@@ -11,10 +14,10 @@ mimic <- load_concepts(c("age", "bmi"), "mimic", verbose = F)
 eicu <- load_concepts(c("age", "bmi"), "eicu", verbose = F)
 
 # filter for age on HiRID
-hirid <- load_concepts(c("age", "bmi"), "hirid", verbose = F)
+hirid <- load_concepts(c("age", "bmi", "version"), "hirid", verbose = F)
 
 # filter for age on AUMC
-aumc <- load_concepts(c("age", "bmi"), "aumc", verbose = F)
+aumc <- load_concepts(c("age", "bmi", "version"), "aumc", verbose = F)
 
 # sort out eICU
 filter0 <- list(
@@ -26,9 +29,9 @@ filter0 <- list(
 )
 
 filter1 <- list(
-  lact = 0.4,
+  lact = 0.0001,
   glu = 0,
-  ins = 0.1,
+  ins = 0.19999,
   bili = 0,
   ast = 0
 )
@@ -49,7 +52,7 @@ pop_per_hosp <- function(filter) {
              .SDcols = concepts, by = "hospitalid"]
 
   p <- ggplot(data=res, aes(x=factor(hospitalid), y=lact)) +
-    geom_bar(stat="identity") + xlab("Measures per patient") + ylab("Hospital") + 
+    geom_bar(stat="identity") + xlab("Measures per patient") + ylab("Hospital") +
     theme_minimal() + ggtitle("barplot")
 
   id <- res[, lapply(concepts, function(x) get(x) > filter[[x]])]
@@ -81,24 +84,28 @@ cohort <- list(
   mimic = list(
     all = unique(id_col(mimic[age >= 18L])),
     bmi = unique(id_col(mimic[age >= 18L & !is.na(bmi)])),
-    insulin = unique(id_col(mimic[age >= 18L & !is.na(bmi)]))
+    insulin = unique(id_col(mimic[age >= 18L & !is.na(bmi)])),
+    new = numeric(0L)
   ),
   eicu = list(
     all = pop_per_hosp(filter0),
     bmi = intersect(pop_per_hosp(filter0), 
                     unique(id_col(eicu[age >= 18L & !is.na(bmi)]))),
     insulin = intersect(pop_per_hosp(filter1), 
-                        unique(id_col(eicu[age >= 18L & !is.na(bmi)])))
+                        unique(id_col(eicu[age >= 18L & !is.na(bmi)]))),
+    new = numeric(0L)
   ),
   hirid = list(
     all = unique(id_col(hirid[age >= 18L])),
     bmi = unique(id_col(hirid[age >= 18L & !is.na(bmi)])),
-    insulin = unique(id_col(hirid[age >= 18L & !is.na(bmi)]))
+    insulin = unique(id_col(hirid[age >= 18L & !is.na(bmi)])),
+    new = unique(id_col(hirid[age >= 18L & !is.na(bmi) & version == "new"]))
   ),
   aumc = list(
     all = unique(id_col(aumc[age >= 18L])),
     bmi = unique(id_col(aumc[age >= 18L & !is.na(bmi)])),
-    insulin = unique(id_col(aumc[age >= 18L & !is.na(bmi)]))
+    insulin = unique(id_col(aumc[age >= 18L & !is.na(bmi)])),
+    new = unique(id_col(aumc[age >= 18L & !is.na(bmi) & version == "new"]))
   )
 )
 
@@ -111,11 +118,21 @@ bmi_bins <- list(
 
 config("bmi-bins", bmi_bins)
 
-# generate the cohort for the Cox model
-src <- c("mimic", "eicu", "hirid", "aumc")
-cox_coh <- Map(function(x, y) setdiff(x[["insulin"]], remove_doi(y)), 
-               cohort, src)
-config("cox-cohort", cox_coh)
+# consort diagram flowchart
+
+n_tot <- Reduce(sum, lapply(cohort, function(x) length(x[["all"]])))
+n_bmi <- Reduce(sum, lapply(cohort, function(x) length(x[["bmi"]])))
+n_ins <- Reduce(sum, lapply(cohort, function(x) length(x[["insulin"]])))
+
+cat("Total number of patients aged >= 18 years", n_tot, "\n")
+
+cat("Patients excluded because of missing BMI", n_tot - n_bmi, "\n")
+cat("Total number of patients aged >= 18 years with BMI", n_bmi, "\n")
+
+cat("Patients excluded because of missing insulin", n_bmi - n_ins, "\n") # 3 hosp
+cat("Total number of patients aged >= 18 years with BMI & insulin centers", 
+    n_ins, "\n")
+
 
 
 
