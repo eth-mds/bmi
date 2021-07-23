@@ -73,8 +73,12 @@ for (c in cnc) {
 }
 
 # plot
-cowplot::plot_grid(plotlist = plt, ncol = 4L)
-ggsave(file.path(root, "4files-BMI", "eSupplement", "eFigure3.tiff"),
+leg_mis <- get_legend(plt[[1]] + theme(legend.position = "bottom"))
+fig_mis <- plot_grid(
+  plotlist = lapply(plt, function(x) x + theme(legend.position = "none")), 
+  ncol = 4L)
+fig_mis <- plot_grid(fig_mis, leg_mis, ncol = 1L, rel_heights = c(1, 0.06))
+ggsave(file.path(root, "figures", "Figure2.tiff"), fig_mis,
        width = 20, height = 10)
 
 # Table
@@ -87,4 +91,4 @@ setcolorder(mkt, "Dataset")
 
 my_doc <- read_docx()
 my_doc <- my_doc %>% body_add_table(mkt, style = "table_template")
-print(my_doc, target = file.path(root, "tables", "eSupplement_Table2.docx"))
+print(my_doc, target = file.path(root, "tables", "Table2.docx"))

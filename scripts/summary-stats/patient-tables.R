@@ -9,7 +9,7 @@ root <- rprojroot::find_root(".gitignore")
 r_dir <- file.path(root, "utils")
 invisible(lapply(list.files(r_dir, full.names = TRUE), source))
 
-src <- c("mimic", "eicu", "hirid", "aumc")
+src <- c("aumc", "hirid", "mimic", "eicu")
 cohorts <- lapply(src, function(x) config("cohort")[[x]][["bmi"]])
 
 vars <- list(
@@ -46,42 +46,6 @@ vars <- list(
     callback = multi_med_iqr
   )
 )
-
-pts_source_sum <- function(source, patient_ids) {
-
-  tbl_list <- lapply(
-    vars,
-    function(x) x[["callback"]](
-      load_concepts(x[["concept"]], source, patient_ids = patient_ids, keep_components = T, 
-        dict_dirs = file.path(root, "custom-dict")), patient_ids
-      )
-  )
-
-  pts_tbl <- Reduce(rbind,
-    lapply(
-      tbl_list,
-      function(x) data.frame(Reduce(cbind, x))
-    )
-  )
-
-  cohort_info <- as.data.frame(cbind("Cohort size", "n", length(patient_ids)))
-  names(cohort_info) <- names(pts_tbl)
-
-  pts_tbl <- rbind(
-    cohort_info,
-    pts_tbl
-  )
-
-  names(pts_tbl) <- c("Variable", "Reported", srcwrap(source))
-
-  pts_tbl$Variable <- mapvalues(pts_tbl$Variable,
-    from = names(concept_translator),
-    to = sapply(names(concept_translator), function(x) concept_translator[[x]])
-  )
-
-  pts_tbl
-
-}
 
 res <- Reduce(
   function(x, y) merge(x, y, by = c("Variable", "Reported"), sort = F),

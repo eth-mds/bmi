@@ -36,7 +36,7 @@ poc <- lapply(
 names(poc) <- src
 
 POC_table(poc, c("BMI group", names(po_chars)), 
-          file.path(root, "tables", "eTable2.docx"))
+          file.path(root, "tables", "Table3.docx"))
 
 
 

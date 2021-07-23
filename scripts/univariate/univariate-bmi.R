@@ -18,7 +18,7 @@ Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 
 ### BMI dose-response
 
-src <- c("mimic", "eicu", "hirid", "aumc")
+src <- c("aumc", "hirid", "mimic", "eicu")
 
 figures <- list(
   tw_avg_glucose = list(
@@ -30,14 +30,14 @@ figures <- list(
   ),
   hypo = list(
     title = "Hypoglycemia prevalence by dataset",
-    y_label = "Hypoglycemic propensity (proportion)",
+    y_label = "Hypoglycemia (proportion)",
     coh = "bmi",
     pos.x = 0.5,
     pos.y = 0.8
   ),
   hypo = list(
     title = "Hypoglycemia in highly monitored group by dataset",
-    y_label = "Hypoglycemic propensity (proportion)",
+    y_label = "Hypoglycemia (proportion)",
     coh = "bmi",
     subset_fn = high_freq,
     pos.x = 0.5,
@@ -83,7 +83,7 @@ figures <- list(
     pos.y = 0.8
   ),
   hypo_cond_diab = list(
-    title = "Hypoglycemia for Diabetic vs. Non-diabetic",
+    title = "Hypoglycemia and diabetes",
     y_label = "Hypoglycemia (proportion)",
     coh = "bmi",
     z_cond = "DM",
@@ -93,8 +93,8 @@ figures <- list(
     pos.y = 0.8
   ),
   death_cond_diab = list(
-    title = "Death for Diabetic vs. Non-diabetic",
-    y_label = "Death (proportion)",
+    title = "Mortality and diabetes",
+    y_label = "Mortality (proportion)",
     coh = "bmi",
     z_cond = "DM",
     z_cond_name = "Diabetes",
@@ -113,8 +113,8 @@ figures <- list(
     pos.y = 0.8
   ),
   death_cond_adm = list(
-    title = "Death and admission type",
-    y_label = "Death (proportion)",
+    title = "Mortality and admission type",
+    y_label = "Mortality (proportion)",
     coh = "bmi",
     z_cond = "adm",
     z_cond_name = "Admission Type",
@@ -178,7 +178,7 @@ figures[["hypo_cond_diab"]][["dat"]] <- CI_dat(diab_src, y = "hypo", z = "DM",
 figures[["death_cond_diab"]][["dat"]] <- CI_dat(diab_src, y = "death", z = "DM",
                                                 z_binning = binary_binning)
 
-adm_src <- c("mimic", "eicu", "aumc")
+adm_src <- c("aumc", "mimic", "eicu")
 adm_binning <- function(x)
   ifelse(x == "med", 1, ifelse(x == "surg", 2, NA))
 figures[["hypo_cond_adm"]][["dat"]] <- CI_dat(adm_src, y = "hypo", z = "adm",
@@ -214,7 +214,7 @@ for (i in 1:length(figures)) {
 }
 
 # Figures
-fig1 <- cowplot::plot_grid(
+fig1 <- plot_grid(
   figures[["tw_avg_glucose"]][["plot"]],
   figures[["death"]][["plot"]],
   figures[["mort_cond_age"]][["plot"]],
@@ -223,43 +223,51 @@ fig1 <- cowplot::plot_grid(
   ncol = 2L
 )
 
-# ggsave(file.path(root, "4files-BMI", "figures", "Figure2.tiff"), 
-#        plot = fig1, width = 18, height = 12)
+ggsave(file.path(root, "figures", "Figure3.tiff"),
+       plot = fig1, width = 18, height = 12)
 
-fig2 <- cowplot::plot_grid(
-  figures[["mort_cond_adm"]][["plot"]],
-  figures[["mort_cond_diab"]][["plot"]],
+fig2 <- plot_grid(
+  figures[["death_cond_adm"]][["plot"]],
+  figures[["death_cond_diab"]][["plot"]],
   figures[["hypo_cond_adm"]][["plot"]],
   figures[["hypo_cond_diab"]][["plot"]],
   labels = c("a)", "b)", "c)", "d)"), 
   ncol = 2L
 )
 
-# ggsave(file.path(root, "4files-BMI", "eSupplement", "eFigure1.tiff"), 
-#        plot = fig2, width = 18, height = 12)
+ggsave(file.path(root, "figures", "Figure4.tiff"),
+       plot = fig2, width = 18, height = 12)
 
-fig3 <- cowplot::plot_grid(
-  figures[["glu_freq"]][["plot"]],
-  figures[[3L]][["plot"]],
-  figures[["fhm"]][["plot"]],
-  figures[[5L]][["plot"]],
-  labels = c("a)", "b)", "c)", "d)"), 
-  ncol = 3L
+leg3 <- get_legend(
+  figures[["glu_freq"]][["plot"]] + theme(legend.position = "bottom")
 )
+fig3 <- plot_grid(
+  figures[["glu_freq"]][["plot"]] + theme(legend.position = "none"),
+  figures[[3L]][["plot"]] + theme(legend.position = "none"),
+  figures[["fhm"]][["plot"]] + theme(legend.position = "none"),
+  figures[[5L]][["plot"]] + theme(legend.position = "none"),
+  labels = c("a)", "b)", "c)", "d)"), 
+  ncol = 2L
+)
+fig3 <- plot_grid(fig3, leg3, ncol = 1L, rel_heights = c(1, 0.075))
 
-# ggsave(file.path(root, "4files-BMI", "eSupplement", "eFigure2.tiff"), 
-#        plot = fig3, width = 18, height = 12)
+ggsave(file.path(root, "figures", "Figure5.tiff"),
+       plot = fig3, width = 18, height = 12)
 
-fig4 <- cowplot::plot_grid(
-  figures[["max_insulin"]][["plot"]],
-  figures[["max_insulin_wnorm"]][["plot"]],
-  figures[["dur_TPN"]][["plot"]],
-  figures[["dur_enteral"]][["plot"]],
-  figures[["dur_cortico"]][["plot"]],
-  figures[["tw_avg_dextrose"]][["plot"]],
+leg4 <- get_legend(
+  figures[["max_insulin"]][["plot"]] + theme(legend.position = "bottom")
+)
+fig4 <- plot_grid(
+  figures[["max_insulin"]][["plot"]] + theme(legend.position = "none"),
+  figures[["max_insulin_wnorm"]][["plot"]] + theme(legend.position = "none"),
+  figures[["dur_TPN"]][["plot"]] + theme(legend.position = "none"),
+  figures[["dur_enteral"]][["plot"]] + theme(legend.position = "none"),
+  figures[["dur_cortico"]][["plot"]] + theme(legend.position = "none"),
+  figures[["tw_avg_dextrose"]][["plot"]] + theme(legend.position = "none"),
   labels = c("a)", "b)", "c)", "d)", "e)", "f)"), 
   ncol = 2L
 )
+fig4 <- cowplot::plot_grid(fig4, leg4, ncol = 1L, rel_heights = c(1, 0.05))
 
-# ggsave(file.path(root, "4files-BMI", "eSupplement", "eFigure3.tiff"), 
-#        plot = fig4, width = 18, height = 18)
+ggsave(file.path(root, "figures", "Figure6.tiff"),
+       plot = fig4, width = 18, height = 18)
