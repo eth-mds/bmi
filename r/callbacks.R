@@ -209,3 +209,72 @@ gen_version <- function(x, val_var, ...) {
   x[, c(val_var) := "new"]
   
 }
+
+ins_ifx_cb <- function(ins, interval) {
+  
+  if (length(id_vars(ins)) == 1L & id_vars(ins)[1L] == "icustay_id") {
+    ins[ins == 0, ins := 2]
+  }
+  
+  if (length(id_vars(ins)) > 1L) {
+    ins[ins == 0 & grepl("mimic", source), ins := 2]
+  } 
+  
+  rename_cols(ins, "ins_ifx", "ins")
+  
+}
+
+sofa_woc <- function (..., worst_val_fun = max_or_na, explicit_wins = FALSE, 
+                      win_length = hours(24L), keep_components = FALSE, 
+                      interval = NULL) 
+{
+  cnc <- c("sofa_resp", "sofa_coag", "sofa_liver", "sofa_cns", "sofa_renal")
+  dat <- ricu:::collect_dots(cnc, interval, ..., merge_dat = TRUE)
+  expr <- substitute(lapply(.SD, fun), list(fun = worst_val_fun))
+  if (isFALSE(explicit_wins)) {
+    res <- fill_gaps(dat)
+    res <- slide(res, !!expr, before = win_length, full_window = FALSE, 
+                 .SDcols = cnc)
+  }
+  else {
+    if (isTRUE(explicit_wins)) {
+      assert_that(ricu:::is_scalar(win_length), ricu:::is_interval(win_length))
+      ind <- index_var(dat)
+      win <- dat[, list(max_time = max(get(ind))), by = c(id_vars(dat))]
+      win <- win[, `:=`(c("min_time"), get("max_time") - 
+                          win_length)]
+      res <- hop(dat, !!expr, win, .SDcols = cnc)
+    }
+    else {
+      res <- slide_index(dat, !!expr, explicit_wins, before = win_length, 
+                         full_window = FALSE, .SDcols = cnc)
+    }
+  }
+  res <- res[, `:=`(c("sofa_wo_cardio"), rowSums(.SD, na.rm = TRUE)), 
+             .SDcols = cnc]
+  if (isTRUE(keep_components)) {
+    res <- rename_cols(res, paste0(cnc, "_comp"), cnc, by_ref = TRUE)
+  }
+  else {
+    res <- rm_cols(res, cnc, by_ref = TRUE)
+  }
+  res
+}
+
+is_hypo_cb <- function(glu, interval, ...) {
+  
+  glu[, list(is_hypo = any(glu <= 70)), by = c(id_vars(glu))]
+  
+}
+
+bin_bmi <- function(bmi, ...) {
+  
+  breaks <- c(-Inf, config("bmi-bins")[["who"]], Inf)
+  
+  bmi[, bmi_bins := factor(.bincode(bmi, breaks))]
+  levels(bmi[["bmi_bins"]]) <- bin_labels(config("bmi-bins")[["who"]], "kg/m2")
+  
+  id_var <- id_vars(bmi)
+  bmi[, c(id_var, "bmi_bins"), with = F]
+  
+}

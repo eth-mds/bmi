@@ -242,55 +242,6 @@ lwrap <- function(lab) {
 
 }
 
-compute_plot <- function(tbl, condition, legend.source, x.pos, y.pos,
-  bins = NULL, unit = NULL, legend.rel.size = 1) {
-
-    print(paste("Dataset:", srcwrap(unique(tbl[["dataset"]]))))
-    print(paste("Conditioning on:", condition))
-    x <- tbl[!is.na(lactbin) & !is.na(get(condition)) & !is.na(f_gluc)]
-    print(paste("Measures used", nrow(x)))
-
-    if (!is.null(bins)) {
-      x[[condition]] <- .bincode(x[[condition]], breaks = c(-Inf, bins, Inf))
-    }
-
-    print(paste(
-      "p-value of the CI test",
-      gcm.test(X = as.matrix(x[["f_gluc"]]), Y = as.matrix(x[[condition]]),
-        Z = as.matrix(x[["lact"]]), regr.method = "gam")[["p.value"]]
-    ))
-
-    df <- x[!is.na(lactbin) & !is.na(get(condition)),
-      median(f_gluc, na.rm = TRUE), by = c("lactbin", condition)]
-
-
-    df[[condition]] <- as.factor(df[[condition]])
-    if (!is.null(bins)) {
-      levels(df[[condition]]) <- bin_labels(bins, unit)
-    } else {
-      levels(df[[condition]]) <- c("no", "yes")
-    }
-
-    data.table::setnames(df, condition, "mid")
-
-    p <- ggplot(df, aes(x = lactbin, y = V1, color = mid)) +
-      geom_line(size = 3) + theme_bw(15) + 
-      ggtitle(srcwrap(unique(tbl[["dataset"]]))) +
-      ylab("Glucose (mg/dL)") + xlab("Lactate (mmol/L)") +
-      scale_x_continuous(labels=bin_labels(lactate_bins, NULL), 
-                         breaks = c(1:(length(lactate_bins)+1))) +
-      guides(color=guide_legend(title=lwrap(condition)))
-    if(grepl(legend.source, unique(tbl[["dataset"]]))) {
-      p <- p + theme(legend.position = c(x.pos, y.pos),
-        legend.box.background = element_rect(colour = "black"),
-        legend.title=element_text(size=rel(legend.rel.size)))
-    } else {
-      p <- p + theme(legend.position = "none")
-    }
-
-    p
-}
-
 sens_spec_table <- function(score, outcome, src) {
   value_set <- sort(unique(score))
   sens <- spec <- NULL
@@ -363,18 +314,6 @@ insulin_days <- function(source,
   res[1:num_days] <- TRUE
 
   res
-}
-
-bin_bmi <- function(bmi, ...) {
-
-  breaks <- c(-Inf, config("bmi-bins")[["who"]], Inf)
-
-  bmi[, bmi_bins := factor(.bincode(bmi, breaks))]
-  levels(bmi[["bmi_bins"]]) <- bin_labels(config("bmi-bins")[["who"]], "kg/m2")
-
-  id_var <- id_vars(bmi)
-  bmi[, c(id_var, "bmi_bins"), with = F]
-
 }
 
 remove_doi <- function(src) {
@@ -507,11 +446,51 @@ percent_fun <- function(x, patient_ids) {
   
   if (val_col == "death") {
     
-    return(list(val_col, "%", round(100 * sum(x[[val_col]]) / length(patient_ids))))
+    return(list(val_col, "%", round(100 * sum(x[[val_col]]) / 
+                                      length(patient_ids))))
     
   }
   
   list(val_col, "%", round(100 * mean(x[[val_col]])))
+  
+}
+
+pts_source_sum <- function(source, patient_ids) {
+  
+  tbl_list <- lapply(
+    vars,
+    function(x) x[["callback"]](
+      load_concepts(x[["concept"]], source, patient_ids = patient_ids, 
+                    keep_components = T), unlist(patient_ids)
+    )
+  )
+  
+  pts_tbl <- Reduce(rbind,
+                    lapply(
+                      tbl_list,
+                      function(x) data.frame(Reduce(cbind, x))
+                    )
+  )
+  
+  cohort_info <- as.data.frame(cbind("Cohort size", "n", 
+                                     length(unlist(patient_ids))))
+  names(cohort_info) <- names(pts_tbl)
+  
+  pts_tbl <- rbind(
+    cohort_info,
+    pts_tbl
+  )
+  
+  names(pts_tbl) <- c("Variable", "Reported", 
+                      paste(srcwrap(source), collapse = "-"))
+  
+  pts_tbl$Variable <- mapvalues(pts_tbl$Variable,
+                                from = names(concept_translator),
+                                to = sapply(names(concept_translator), 
+                                            function(x) concept_translator[[x]])
+  )
+  
+  pts_tbl
   
 }
 
@@ -534,3 +513,42 @@ concept_translator <- list(
   sofa_cardio_comp = "- Cardiovascular",
   sofa_renal_comp = "- Renal"
 )
+
+pol_varnames <- function(x) {
+  
+  subs <- list(
+    list("bmi", "BMI"),
+    list("glu", "Blood glucose"),
+    list("lact", "Blood lactate"),
+    list("ins_ifx", "Insulin"),
+    list("shock_yes", "MAP < 60 mmHg or vasopressor therapy"),
+    list("shock_no", "MAP ≥ 60 mmHg, no vasopressor therapy"),
+    list("sofa_cns_comp", "SOFA CNS"),
+    list("sofa_coag_comp", "SOFA Coagulation"),
+    list("sofa_renal_comp", "SOFA Renal"),
+    list("sofa_resp_comp", "SOFA Respiratory"),
+    list("DM", "Diabetes"),
+    list("source", ""),
+    list("cortico", "Corticosteroids"),
+    list("TPN", "Parenteral nutritrion"),
+    list("enteral", "Enteral nutritrion"),
+    list("dex_amount", "Dextrose 10%"),
+    list("sofa_wo_cardio", "SOFA*")
+  )
+  
+  for (i in seq_len(length(subs))) 
+    x <- gsub(subs[[i]][[1]], subs[[i]][[2]], x)
+  
+  adds <- list(
+    list("lactate", "mmol/L"),
+    list("glucose", "mg/dL"),
+    list("BMI", "kg/m2"),
+    list("Insulin", "u/h"),
+    list("Dextrose", "mL/h")
+  )
+  
+  for (i in seq_len(length(adds))) 
+    x <- ifelse(grepl(adds[[i]][[1]], x), paste(x, adds[[i]][[2]]), x)
+  
+  x
+}

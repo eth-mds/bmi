@@ -6,16 +6,8 @@ collect_hypo_cases <- function(tbl, max.hour = 240L) {
   # collect the relevant rows
   marks <- 6 * (1:(max.hour/6))
   rel_cols <- c(setdiff(names(tbl), meta_vars(tbl)))
-  collect <- NULL
-  for (mark in marks) {
-    tmp <- tbl[get(index_var(tbl)) == mark]
-    collect <- rbind(
-      collect,
-      as.matrix(tmp[, rel_cols, with = FALSE])
-    )
-  }
-
-  collect <- data.table::data.table(collect)
+  if (is.element("source", names(tbl))) rel_cols <- c(rel_cols, "source")
+  collect <- tbl[get(index_var(tbl)) %in% marks, rel_cols, with = FALSE]
   collect[, hypo := NULL]
   collect <- data.table::setnames(collect, "hypo_LA", "hypo")
 
@@ -25,22 +17,18 @@ collect_hypo_cases <- function(tbl, max.hour = 240L) {
 
 glycemia_treatment <- function(data_source,
   vars = list(glu = list(time = 24L, imp_val = NA_real_),
-    lact = list(time = 24L, imp_val = 1), ins = list(time = 12L, imp_val = 0),
+    lact = list(time = 24L, imp_val = 1), 
+    ins_ifx = list(time = 12L, imp_val = 0),
     bmi = list(time = 0L, imp_val = NA), shock = list(time = 24L, imp_val = 0)), 
   fill_na = FALSE, patient_ids = NULL, hypo = TRUE, hypo.threshold = 3.9,
   sofa = FALSE, verbose = FALSE) {
   
-  stat <- intersect(names(vars), c("bmi", "weight", "height", "age"))
+  stat <- intersect(names(vars), c("bmi", "weight", "height", "age", "DM"))
   dyn <- setdiff(names(vars), stat)
   tbl <- load_concepts(dyn, data_source, patient_ids = patient_ids, 
                        verbose = verbose)
   static <- load_concepts(stat, data_source, patient_ids = patient_ids, 
                           verbose = verbose)
-
-  if (data_source == "mimic" & is.element("ins", names(tbl))) {
-    tbl[ins == 0, "ins"] <- 2 # MIMIC carevue imputation
-  } 
-  
 
   # fill gaps
   tbl <- fill_gaps(tbl)
@@ -57,14 +45,9 @@ glycemia_treatment <- function(data_source,
                           .SDcols = names(vars)]
   
   if (sofa) {
-    sofa <- load_concepts("sofa", data_source, keep_components = TRUE,
+    cmp <- "sofa_wo_cardio"
+    sofa <- load_concepts(cmp, data_source, patient_ids = patient_ids, 
                           verbose = verbose)
-    sofa[, c("sofa_liver_comp", "sofa_cardio_comp") := NULL]
-    sofa <- replace_na(sofa, 0L)
-    
-    cmp <- c("sofa_coag_comp", "sofa_renal_comp", "sofa_cns_comp", 
-             "sofa_resp_comp")
-    sofa <- sofa[, c(meta_vars(sofa), cmp), with = FALSE]
     tbl <- merge(tbl, sofa, all.x = TRUE)
     if (fill_na) tbl <- replace_na(tbl, 0L, vars = cmp)
   }
@@ -221,7 +204,7 @@ get_target <- function(source, target, upto, patient_ids) {
     
   } else if (target == "max_insulin") {
 
-    res <- w_value(source, "ins", dir = "increasing", upto = upto,
+    res <- w_value(source, "ins_ifx", dir = "increasing", upto = upto,
                    patient_ids = patient_ids)
     res <- rename_cols(res, "target", "w_val")
 
@@ -263,7 +246,7 @@ get_target <- function(source, target, upto, patient_ids) {
     
   } else if (target == "max_insulin_wnorm") {
 
-    res <- w_value(source, "ins", dir = "increasing", upto = upto,
+    res <- w_value(source, "ins_ifx", dir = "increasing", upto = upto,
                    patient_ids = patient_ids)
     res <- merge(res, load_concepts("weight", source), patient_ids = patient_ids)
     res <- rename_cols(res, "target", "w_val")
