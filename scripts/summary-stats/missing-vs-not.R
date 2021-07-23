@@ -8,18 +8,12 @@ library(plyr)
 root <- rprojroot::find_root(".gitignore")
 r_dir <- file.path(root, "r")
 invisible(lapply(list.files(r_dir, full.names = TRUE), source))
-
-src <- c("aumc", "hirid", "mimic", "eicu")
-cohorts <- lapply(src, function(x) config("cohort")[[x]][["bmi"]])
+Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 
 vars <- list(
   age = list(
     concept = "age",
     callback = med_iqr
-  ),
-  bmi = list(
-    concept = "bmi_bins",
-    callback = tab_design
   ),
   admission = list(
     concept = "adm",
@@ -27,6 +21,10 @@ vars <- list(
   ),
   death = list(
     concept = "death",
+    callback = percent_fun
+  ),
+  is_hypo = list(
+    concept = "is_hypo",
     callback = percent_fun
   ),
   los_icu = list(
@@ -47,14 +45,11 @@ vars <- list(
   )
 )
 
-res <- Reduce(
-  function(x, y) merge(x, y, by = c("Variable", "Reported"), sort = F),
-  Map(pts_source_sum, src, cohorts)
-)
+all <- lapply(config("cohort"), `[[`, "all")
+bmi <- lapply(config("cohort"), `[[`, "bmi")
+miss <- Map(function(x, y) setdiff(x, y), all, bmi)
 
-my_doc <- read_docx()
+src <- c("mimic_demo", "eicu_demo")
+names(miss) <- c(src, "hirid", "aumc")
 
-my_doc <- my_doc %>%
-  body_add_table(res, style = "table_template")
-
-print(my_doc, target = file.path(root, "tables", "Table1.docx"))
+pts_source_sum(src, patient_ids = miss[1:2])

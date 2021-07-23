@@ -530,8 +530,8 @@ pol_varnames <- function(x) {
     list("DM", "Diabetes"),
     list("source", ""),
     list("cortico", "Corticosteroids"),
-    list("TPN", "Parenteral nutritrion"),
-    list("enteral", "Enteral nutritrion"),
+    list("enteral", "Enteral nutrition"),
+    list("TPN", "Parenteral nutrition"),
     list("dex_amount", "Dextrose 10%"),
     list("sofa_wo_cardio", "SOFA*")
   )

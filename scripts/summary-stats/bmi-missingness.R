@@ -2,8 +2,9 @@ library(ricu)
 library(assertthat)
 
 root <- rprojroot::find_root(".gitignore")
-r_dir <- file.path(root, "utils")
+r_dir <- file.path(root, "r")
 invisible(lapply(list.files(r_dir, full.names = TRUE), source))
+Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 
 bmi_proportion <- function(src) {
   
@@ -21,7 +22,13 @@ bmi_proportion <- function(src) {
   
 }
 
-hypo_summary <- function(source, patient_ids = config("cohort")[[source]][["bmi"]]) {
+coh_size <- function(src, coh) {
+  Reduce(sum, lapply(config("cohort")[src], function(x) length(x[[coh]])))
+}
+
+hypo_summary <- function(src, coh) {
+  
+  patient_ids <- config("cohort")[[src]][[coh]]
   
   ins_hypo <- hypo(source, patient_ids, upto = hours(Inf))
   
@@ -32,81 +39,41 @@ hypo_summary <- function(source, patient_ids = config("cohort")[[source]][["bmi"
   )
 }
 
-num_measures <- function(cnc, src, patient_ids) {
+num_measures <- function(cnc, src, coh) {
   
-  if (length(cnc) > 1) return(sum(sapply(cnc, num_measures, src = src, patient_ids = patient_ids)))
-  
-  nrow(load_concepts(cnc, src, patient_ids = patient_ids, verbose = F))
-  
+  patient_ids <- lapply(config("cohort")[src], `[[`, coh)
+  tbl <- load_concepts(cnc, src, patient_ids = patient_ids, verbose = F)
+  cat("Concept", cnc, "with a total of", nrow(tbl), "measures\n")
+  if (length(src) > 1L) 
+    cat(paste(tbl[, .N, by = "source"][["N"]], collapse = ", "), "per dataset\n")
 }
 
-db <- c("mimic", "eicu", "hirid", "aumc")
+db <- c("aumc", "hirid", "mimic", "eicu")
 
 # BMI missingness
 
 print("BMI missingness")
-
+cat("overall:", 100 * coh_size(db, "bmi") / coh_size(db, "all"))
 paste0(
   sapply(db, bmi_proportion),
   collapse = ", "
 )
 
 # cohort size
-
 print("Cohort size")
-
-paste0(
-  sapply(db, function(src) length(config("cohort")[[src]][["bmi"]])),
-  collapse = ", "
-)
+bmi <- sapply(db, coh_size, coh = "bmi")
+sum(bmi)
+paste0(bmi, collapse = ", ")
 
 # glucose measurements
+num_measures("glu", db, "bmi")
 
-print("Glucose:")
-
-paste0(
-  sapply(db, function(src) num_measures("glu", src, config("cohort")[[src]][["bmi"]])),
-  collapse = ", "
-)
-
-# lactate measurements
-
-print("Lactate:")
-
-paste0(
-  sapply(db, function(src) num_measures("lact", src, config("cohort")[[src]][["insulin"]])),
-  collapse = ", "
-)
-
-# liver measurements
-
-print("Liver enzymes:")
-
-paste0(
-  sapply(db, function(src) num_measures(c("ast", "alt", "bili"), src, config("cohort")[[src]][["insulin"]])),
-  collapse = ", "
-)
-
-# MAP measurements
-
-print("MAP:")
-
-paste0(
-  sapply(db, function(src) num_measures("map", src, config("cohort")[[src]][["insulin"]])),
-  collapse = ", "
-)
-
-# insulin measurements
-
-print("Hours of insulin:")
-
-paste0(
-  sapply(db, function(src) num_measures("ins", src, config("cohort")[[src]][["insulin"]])),
-  collapse = ", "
-)
+# multivariate analysis
+mcnc <- c("lact", "map", "norepi_equiv", "ins_ifx", "dex_amount", "TPN", 
+          "enteral", "cortico")
+for (cnc in mcnc) num_measures(cnc, db, "insulin")
 
 # Hypoglycemia information
-
 print("Hypoglycemia information:")
 
 paste0(

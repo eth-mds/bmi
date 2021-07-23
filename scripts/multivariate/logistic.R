@@ -47,7 +47,7 @@ multivariate <- function(src, coh, diabetes = FALSE) {
   rsh <- rsh[glu > 18.016*3.9] # does this throw away anything?!
   reshape_list <- list(
     lact = c(2, 5), glu = 18.016*c(6, 8, 10), ins_ifx = c(0.0001, 2.5, 5),
-    shock = 0.5, dex_amount = c(0.0001, 10, 25, 50), 
+    shock = 0.5, dex_amount = c(0.0001, 25), 
     bmi = config("bmi-bins")[["who"]]
   )
   
@@ -58,9 +58,13 @@ multivariate <- function(src, coh, diabetes = FALSE) {
   rsh$bmi <- relevel(rsh$bmi, ref = 2)
   if (is.element("source", names(rsh))) {
     rsh$source <- as.factor(rsh$source)
-    if (is.element("mimic_demo", rsh$source)) ref_lvl <- "mimic_demo"
-    if (is.element("aumc", rsh$source)) ref_lvl <- "aumc"
-    if (is.element("mimic", rsh$source)) ref_lvl <- "mimic"
+    if (is.element("mimic_demo", rsh$source)) {
+      ref_lvl <- "mimic_demo"
+    } else if (is.element("aumc", rsh$source)) {
+      ref_lvl <- "aumc"
+    } else if (is.element("mimic", rsh$source)) {
+      ref_lvl <- "mimic"
+    }
     rsh$source <- relevel(rsh$source, ref = ref_lvl)
   }
   
