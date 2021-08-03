@@ -49,7 +49,16 @@ all <- lapply(config("cohort"), `[[`, "all")
 bmi <- lapply(config("cohort"), `[[`, "bmi")
 miss <- Map(function(x, y) setdiff(x, y), all, bmi)
 
-src <- c("mimic_demo", "eicu_demo")
-names(miss) <- c(src, "hirid", "aumc")
+src <- c("aumc", "hirid", "mimic", "eicu")
 
-pts_source_sum(src, patient_ids = miss[1:2])
+m_vs_n <- merge(
+  pts_source_sum(src, patient_ids = bmi),
+  pts_source_sum(src, patient_ids = miss),
+  by = c("Variable", "Reported"), sort = FALSE
+)
+names(m_vs_n) <- c("Variable", "Reported", "BMI reported", "BMI missing")
+
+my_doc <- read_docx()
+my_doc <- my_doc %>%
+  body_add_table(m_vs_n, style = "table_template")
+print(my_doc, target = file.path(root, "tables", "Table5.docx"))
