@@ -463,7 +463,6 @@
       "mimic_demo": [
         {
           "table": "diagnoses_icd",
-          "sub_var": "icd9_code",
           "class": "col_itm",
           "callback": "DM_callback"
         }
@@ -471,7 +470,6 @@
       "mimic": [
         {
           "table": "diagnoses_icd",
-          "sub_var": "icd9_code",
           "class": "col_itm",
           "callback": "DM_callback"
         }
@@ -479,7 +477,6 @@
       "eicu_demo": [
         {
           "table": "diagnosis",
-          "sub_var": "icd9code",
           "class": "col_itm",
           "callback": "DM_callback"
         }
@@ -487,7 +484,6 @@
       "eicu": [
         {
           "table": "diagnosis",
-          "sub_var": "icd9code",
           "class": "col_itm",
           "callback": "DM_callback"
         }
