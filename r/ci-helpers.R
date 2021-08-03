@@ -5,8 +5,7 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
                    subset_fn = NULL,
                    patient_ids = config("cohort")[[src]][[coh]]) {
   
-  cat("Handling target", y, "\n\n")
-  
+  cat("Dataset(s):", src, "\n")
   if (length(src) > 1L) {
     
     patient_ids <- lapply(src, function(dsrc) config("cohort")[[dsrc]][[coh]])
@@ -19,9 +18,10 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
   
   # load x
   by.args <- x
-  xt <- load_concepts(x, src, patient_ids = patient_ids)
+  xt <- load_concepts(x, src, patient_ids = patient_ids, verbose = FALSE)
   
   # apply x_bins to xt
+  xt[, raw := get(x)]
   xt[[x]] <- .bincode(xt[[x]], c(-Inf, x_bins, Inf))
   
   if (y == "fhm") {
@@ -45,6 +45,9 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
     
     yt <- yt[!is.na(get(z))]
   }
+  
+  # independence tests:
+  H_test(x = yt[["raw"]], y = yt[[y]], z = if (!is.null(z)) yt[[z]] else NULL) 
   
   # bootstrap the mean of y and ci(y)
   get_ci <- function(sample) {

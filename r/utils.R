@@ -242,6 +242,28 @@ lwrap <- function(lab) {
 
 }
 
+H_test <- function(x, y, z = NULL) {
+  
+  if (!is.null(z)) {
+    lapply(sort(unique(z)), function(zval) {
+      cat("Z-value", zval, "\n")
+      H_test(x[z == zval], y[z == zval])
+    })
+    return()
+  }
+  
+  if (is.logical(y)) {
+    cat("Logical, two-sample test with p-value:",
+        wilcox.test(x ~ y)$p.value, "\n")
+    cat("Logical, contigency test p-value:",
+        chisq.test(table(x > 25, y))$p.value, "\n")
+  } else{
+    cat("Mann-Whitney U-test with p-value:",
+        wilcox.test(y[x > 25], y[x <= 25])$p.value, "\n")
+  }
+  
+}
+
 sens_spec_table <- function(score, outcome, src) {
   value_set <- sort(unique(score))
   sens <- spec <- NULL

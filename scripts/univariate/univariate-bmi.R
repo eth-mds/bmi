@@ -10,6 +10,7 @@ library(assertthat)
 library(boot)
 library(data.table)
 library(icd)
+library(GeneralisedCovarianceMeasure)
 
 root <- rprojroot::find_root(rprojroot::has_file(".gitignore"))
 r_dir <- file.path(root, "r")
@@ -194,10 +195,13 @@ for (i in 1:length(figures)) {
   
   if (is.null(figures[[i]][["dat"]])) {
     
+    cat("Handling target", names(figures)[i], "\n\n")
     dat <- lapply(src, CI_dat, y = names(figures)[i])
     figures[[i]][["dat"]] <- dat
     
   } else dat <- figures[[i]][["dat"]]
+  
+  cat("-----------------------\n")
   
   plot <- CI_plot(dat, 
                   title = figures[[i]][["title"]], 

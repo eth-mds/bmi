@@ -56,12 +56,11 @@ aumc_cortico <- function(x, dur_var, ...) {
   
 }
 
-DM_callback <- function(x, ...) {
+DM_callback <- function(x, val_var, ...) {
   
-  sub_var <- setdiff(names(x), meta_vars(x))
-  if (sub_var == "icd9code") {
+  if (val_var == "icd9code") {
     
-    x[, c(sub_var) := gsub(",.*", "", get(sub_var))]
+    x[, c(val_var) := gsub(",.*", "", get(val_var))]
     
   }
   

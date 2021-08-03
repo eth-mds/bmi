@@ -67,7 +67,7 @@ glycemia_treatment <- function(data_source,
 
 tw_avg <- function(cnc, source, upto, hypo_censoring = TRUE,
                    patient_ids = config("cohort")[[source]][["bmi"]]) {
-  
+
   x <- load_concepts(cnc, source, patient_ids = patient_ids, 
                      verbose = F)
   limits <- merge(x[, list(first_obs = min(get(index_var(x)))), 
