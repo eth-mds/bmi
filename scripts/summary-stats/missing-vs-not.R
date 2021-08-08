@@ -61,4 +61,4 @@ names(m_vs_n) <- c("Variable", "Reported", "BMI reported", "BMI missing")
 my_doc <- read_docx()
 my_doc <- my_doc %>%
   body_add_table(m_vs_n, style = "table_template")
-print(my_doc, target = file.path(root, "tables", "Table5.docx"))
+print(my_doc, target = file.path(root, "Table5.docx"))
