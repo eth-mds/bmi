@@ -10,7 +10,6 @@ library(assertthat)
 library(boot)
 library(data.table)
 library(icd)
-library(GeneralisedCovarianceMeasure)
 
 root <- rprojroot::find_root(rprojroot::has_file(".gitignore"))
 r_dir <- file.path(root, "r")
@@ -82,89 +81,89 @@ figures <- list(
     coh = "bmi",
     pos.x = 0.4,
     pos.y = 0.8
-  ),
-  hypo_cond_diab = list(
-    title = "Hypoglycemia and diabetes",
-    y_label = "Hypoglycemia (proportion)",
-    coh = "bmi",
-    z_cond = "DM",
-    z_cond_name = "Diabetes",
-    z_cond_labels = c("No", "Yes"),
-    pos.x = 0.6,
-    pos.y = 0.8
-  ),
-  death_cond_diab = list(
-    title = "Mortality and diabetes",
-    y_label = "Mortality (proportion)",
-    coh = "bmi",
-    z_cond = "DM",
-    z_cond_name = "Diabetes",
-    z_cond_labels = c("No", "Yes"),
-    pos.x = 0.6,
-    pos.y = 0.8
-  ),
-  hypo_cond_adm = list(
-    title = "Hypoglycemia and admission type",
-    y_label = "Hypoglycemia (proportion)",
-    coh = "bmi",
-    z_cond = "adm",
-    z_cond_name = "Admission Type",
-    z_cond_labels = c("Medical", "Surgical", "Other"),
-    pos.x = 0.6,
-    pos.y = 0.8
-  ),
-  death_cond_adm = list(
-    title = "Mortality and admission type",
-    y_label = "Mortality (proportion)",
-    coh = "bmi",
-    z_cond = "adm",
-    z_cond_name = "Admission Type",
-    z_cond_labels = c("Medical", "Surgical", "Other"),
-    pos.x = 0.6,
-    pos.y = 0.8
-  ),
-  max_insulin = list(
-    title = "Insulin rate by dataset",
-    y_label = "Maximal insulin rate (U/h)",
-    coh = "insulin",
-    pos.x = 0.2,
-    pos.y = 0.8
-  ),
-  max_insulin_wnorm = list(
-    title = "Weight-normalized insulin by dataset",
-    y_label = "Weight-norm. max. insulin rate (U/(h*kg))",
-    coh = "insulin",
-    pos.x = 0.3,
-    pos.y = 0.8
-  ),
-  dur_TPN = list(
-    title = "Total parenteral nutrition duration",
-    y_label = "Mean proportion of time treated",
-    coh = "insulin",
-    pos.x = 0.6,
-    pos.y = 0.8
-  ),
-  dur_enteral = list(
-    title = "Enteral nutrition duration",
-    y_label = "Mean proportion of time treated",
-    coh = "insulin",
-    pos.x = 0.6,
-    pos.y = 0.8
-  ),
-  dur_cortico = list(
-    title = "Corticosteroids duration",
-    y_label = "Mean proportion of time treated",
-    coh = "insulin",
-    pos.x = 0.6,
-    pos.y = 0.8
-  ),
-  tw_avg_dextrose = list(
-    title = "Average dextrose infusion rate",
-    y_label = "Infusion rate (ml/hour)",
-    coh = "insulin",
-    pos.x = 0.6,
-    pos.y = 0.8
-  )
+  )#,
+  # hypo_cond_diab = list(
+  #   title = "Hypoglycemia and diabetes",
+  #   y_label = "Hypoglycemia (proportion)",
+  #   coh = "bmi",
+  #   z_cond = "DM",
+  #   z_cond_name = "Diabetes",
+  #   z_cond_labels = c("No", "Yes"),
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # ),
+  # death_cond_diab = list(
+  #   title = "Mortality and diabetes",
+  #   y_label = "Mortality (proportion)",
+  #   coh = "bmi",
+  #   z_cond = "DM",
+  #   z_cond_name = "Diabetes",
+  #   z_cond_labels = c("No", "Yes"),
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # ),
+  # hypo_cond_adm = list(
+  #   title = "Hypoglycemia and admission type",
+  #   y_label = "Hypoglycemia (proportion)",
+  #   coh = "bmi",
+  #   z_cond = "adm",
+  #   z_cond_name = "Admission Type",
+  #   z_cond_labels = c("Medical", "Surgical", "Other"),
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # ),
+  # death_cond_adm = list(
+  #   title = "Mortality and admission type",
+  #   y_label = "Mortality (proportion)",
+  #   coh = "bmi",
+  #   z_cond = "adm",
+  #   z_cond_name = "Admission Type",
+  #   z_cond_labels = c("Medical", "Surgical", "Other"),
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # ),
+  # max_insulin = list(
+  #   title = "Insulin rate by dataset",
+  #   y_label = "Maximal insulin rate (U/h)",
+  #   coh = "insulin",
+  #   pos.x = 0.2,
+  #   pos.y = 0.8
+  # ),
+  # max_insulin_wnorm = list(
+  #   title = "Weight-normalized insulin by dataset",
+  #   y_label = "Weight-norm. max. insulin rate (U/(h*kg))",
+  #   coh = "insulin",
+  #   pos.x = 0.3,
+  #   pos.y = 0.8
+  # ),
+  # dur_TPN = list(
+  #   title = "Total parenteral nutrition duration",
+  #   y_label = "Mean proportion of time treated",
+  #   coh = "insulin",
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # ),
+  # dur_enteral = list(
+  #   title = "Enteral nutrition duration",
+  #   y_label = "Mean proportion of time treated",
+  #   coh = "insulin",
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # ),
+  # dur_cortico = list(
+  #   title = "Corticosteroids duration",
+  #   y_label = "Mean proportion of time treated",
+  #   coh = "insulin",
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # ),
+  # tw_avg_dextrose = list(
+  #   title = "Average dextrose infusion rate",
+  #   y_label = "Infusion rate (ml/hour)",
+  #   coh = "insulin",
+  #   pos.x = 0.6,
+  #   pos.y = 0.8
+  # )
 )
 
 # conditional, multi-source plots
@@ -196,7 +195,8 @@ for (i in 1:length(figures)) {
   if (is.null(figures[[i]][["dat"]])) {
     
     cat("Handling target", names(figures)[i], "\n\n")
-    dat <- lapply(src, CI_dat, y = names(figures)[i])
+    dat <- lapply(src, CI_dat, y = names(figures)[i], 
+                  subset_fn = figures[[i]][["subset_fn"]])
     figures[[i]][["dat"]] <- dat
     
   } else dat <- figures[[i]][["dat"]]
