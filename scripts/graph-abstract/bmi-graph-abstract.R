@@ -16,14 +16,16 @@ res <- Map(CI_dat, y = names(feat), MoreArgs = list(
   patient_ids = lapply(config("cohort"), `[[`, "bmi")
 ))
 
-res <- Map(`cbind`, res, Name = lapply(feat, rep, length(bins) + 1L))
+res <- Map(`cbind`, res, Name = lapply(factor(feat, levels = feat), rep,
+                                       length(bins) + 1L))
 res <- rbind_lst(res)
 res <- rename_cols(res[, list(meanval, V1, Name)],
                    c("Group", "Value", "Feature"))
-res <- res[grepl("[%]$", Feature), Value := Value * 100]
+
+res$Value <- ifelse(grepl("\\[%\\]$", res$Feature), res$Value * 100, res$Value)
 
 res <- cbind(as.data.frame(res),
-             Ymin = rep(c(132, 7, 12), each = 4),
+             Ymin = rep(c(131.5, 7, 11.5), each = 4),
              Ymax = rep(c(150, 14, 23), each = 4))
 
 labs <- paste0(
@@ -56,7 +58,7 @@ grid <- ggplot(res, aes(x = Group, y = Value)) +
   ) +
   scale_x_continuous(breaks = 1:4, limits = c(0.75, 4.35), labels = labs) +
   scale_y_continuous(position = "right") +
-  ggtitle("Hypoglycaemia and the obesity paradox")
+  ggtitle("Hypoglycemia and the obesity paradox")
 
 plot <- ggplot(res, aes(x = Group, y = Value)) +
   geom_line() +
@@ -80,19 +82,23 @@ plot <- ggplot(res, aes(x = Group, y = Value)) +
   scale_x_continuous("BMI group [kg/m<sup>2</sup>]", breaks = 1:4,
                      limits = c(0.75, 4.35), labels = labs) +
   scale_y_continuous(position = "right") +
-  ggtitle("Hypoglycaemia and the obesity paradox")
+  ggtitle("Hypoglycemia and the obesity paradox")
 
-ggsave("plot.png", plot, width = 8, height = 5.5, dpi = 300, bg = "transparent")
-ggsave("grid.png", grid, width = 8, height = 5.5, dpi = 300, bg = "transparent")
+ggsave(file.path(root, "scripts", "graph-abstract", "plot.png"), plot,
+       width = 8, height = 5.5, dpi = 300, bg = "transparent")
+ggsave(file.path(root, "scripts", "graph-abstract", "grid.png"), grid,
+       width = 8, height = 5.5, dpi = 300, bg = "transparent")
 
-plot <- image_read("plot.png")
-grid <- image_read("grid.png")
+plot <- image_read(file.path(root, "scripts", "graph-abstract", "plot.png"))
+grid <- image_read(file.path(root, "scripts", "graph-abstract", "grid.png"))
 
 # export area: x (0, 1100), y (0, 750), size: 2000 X 1364 @ 175 dpi
-bg <- image_read("bmi-background.png")
+bg <- image_read(file.path(root, "scripts", "graph-abstract",
+                           "bmi-background.png"))
 res <- image_mosaic(c(grid, bg, plot))
 
 image_browse(res)
 
-image_write(image_resize(res, "1200x"), path = "graph-abstract.png",
+image_write(image_resize(res, "1200x"),
+            path = file.path(root, "scripts", "graph-abstract", "graph-abstract.png"),
             format = "png")
