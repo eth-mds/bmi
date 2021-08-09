@@ -28,13 +28,14 @@ res <- cbind(as.data.frame(res),
 
 labs <- paste0(
   "<b>",
-  c("UNDERWEIGHT", "NORMAL", "OVERWEIGHT", "OBESE (CLASS I-III)"), "</b><br><br><span style='font-size:14pt'>",
+  c("UNDERWEIGHT", "NORMAL", "OVERWEIGHT", "OBESE (CLASS I-III)"),
+  "</b><br><br><span style='font-size:14pt'>",
   c(paste(">&lt;", bins[1L]), paste(bins[1L], "-", bins[2L]),
     paste(bins[2L], "-", bins[3L]), paste("&gt;", bins[3L])),
   "</span>"
 )
 
-grid <- ggplot(df, aes(x = Group, y = Value)) +
+grid <- ggplot(res, aes(x = Group, y = Value)) +
   geom_line(color = NA) +
   facet_grid(rows = vars(Feature), scales = "free_y", switch = "y") +
   geom_blank(aes(y = Ymin)) +
@@ -57,7 +58,7 @@ grid <- ggplot(df, aes(x = Group, y = Value)) +
   scale_y_continuous(position = "right") +
   ggtitle("Hypoglycaemia and the obesity paradox")
 
-plot <- ggplot(df, aes(x = Group, y = Value)) +
+plot <- ggplot(res, aes(x = Group, y = Value)) +
   geom_line() +
   facet_grid(rows = vars(Feature), scales = "free_y", switch = "y") +
   geom_blank(aes(y = Ymin)) +
