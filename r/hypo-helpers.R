@@ -202,6 +202,12 @@ get_target <- function(source, target, upto, patient_ids) {
     
     res <- tw_avg_0imp("dex_amount", source, upto, patient_ids = patient_ids)
     
+  } else if (target == "min_pafi") {
+    
+    res <- w_value(source, "pafi", dir = "decreasing", upto = upto,
+                   patient_ids = patient_ids)
+    res <- rename_cols(res, "target", "w_val")
+    
   } else if (target == "max_insulin") {
 
     res <- w_value(source, "ins_ifx", dir = "increasing", upto = upto,
@@ -286,5 +292,46 @@ high_freq <- function(src, patient_ids, upto) {
 hypo_only <- function(src, patient_ids, upto) {
   
   id_col(hypo(src, patient_ids, upto = upto))
+  
+}
+
+assoc_hmap <- function(res, gm = "gv_cv", bins = c(10, 20, 30),
+                       bin_lvls = c("<10%", "10-20%", "20-30%", ">30%"),
+                       y_label = "Glucose coefficient of variation",
+                       title = "Glucsoe variability and mortality") {
+  
+  bern_ci <- function(p, n) {
+    if (length(p) > 1) return(unlist(Map(bern_ci, p, n)))
+    if (n > 100) {
+      sgm <- sqrt(p * (1-p) / n)
+      return(paste0("(", spec_dec(p - 1.96*sgm, 2), "-", 
+                    spec_dec(p + 1.96*sgm, 2), ")"))
+    } else {
+      pqs <- quantile(rbinom(100, n, p)/n, c(0.025, 0.975))
+      return(paste0("(", spec_dec(pqs[1], 2), "-", spec_dec(pqs[2], 2), ")")) 
+    }
+  }
+  
+  res <- res[!is.na(get(gm))]
+  res[, 
+      c(gm) := factor(.bincode(get(gm), c(-Inf, bins, Inf)), 
+                      labels = bin_lvls)
+  ]
+  res[, DM := factor(DM, labels = c("No DM", "DM"))]
+  
+  dat <- res[, list(Mortality = mean(death), gsize = .N), 
+             by = c(gm, "bmi_bins", "DM")]
+  dat[, 
+      txt_lab := paste0(spec_dec(Mortality, 2), "\n", bern_ci(Mortality, gsize))
+     ]
+  
+  ggplot(dat, aes_string(x = "DM", y = gm, fill = "Mortality")) +
+    geom_bin_2d(aes_string(y = gm)) +
+    facet_grid(cols = vars(bmi_bins)) + 
+    scale_fill_viridis_c(limits = c(0.02, 0.26), breaks = c(0.05, 0.15, 0.25)) +
+    geom_text(aes(label = txt_lab), color = "red", size = 3) +
+    xlab("BMI bins") + ylab(y_label) +
+    theme_bw() + ggtitle(title) + xlab(NULL) +
+    theme(legend.position = "bottom")
   
 }
