@@ -32,7 +32,7 @@ labs <- paste0(
   "<b>",
   c("UNDERWEIGHT", "NORMAL", "OVERWEIGHT", "OBESE (CLASS I-III)"),
   "</b><br><br><span style='font-size:14pt'>",
-  c(paste(">&lt;", bins[1L]), paste(bins[1L], "-", bins[2L]),
+  c(paste("&lt;", bins[1L]), paste(bins[1L], "-", bins[2L]),
     paste(bins[2L], "-", bins[3L]), paste("&gt;", bins[3L])),
   "</span>"
 )
