@@ -456,7 +456,7 @@
     }
   },
   "DM": {
-    "description": "No. comorbidities",
+    "description": "Diabetes Mellitus (ICD-9 / ICD-10)",
     "category": "Misc.",
     "target": "id_tbl",
     "sources": {
@@ -464,28 +464,35 @@
         {
           "table": "diagnoses_icd",
           "class": "col_itm",
-          "callback": "DM_callback"
+          "callback": "DM910_callback"
         }
       ],
       "mimic": [
         {
           "table": "diagnoses_icd",
           "class": "col_itm",
-          "callback": "DM_callback"
+          "callback": "DM910_callback"
+        }
+      ],
+      "miiv": [
+        {
+          "table": "diagnoses_icd",
+          "class": "col_itm",
+          "callback": "DM910_callback"
         }
       ],
       "eicu_demo": [
         {
           "table": "diagnosis",
           "class": "col_itm",
-          "callback": "DM_callback"
+          "callback": "DM910_callback"
         }
       ],
       "eicu": [
         {
           "table": "diagnosis",
           "class": "col_itm",
-          "callback": "DM_callback"
+          "callback": "DM910_callback"
         }
       ]
     }
@@ -608,6 +615,151 @@
     "concepts": ["bmi"],
     "description": "BMI (WHO bins)",
     "callback": "bin_bmi",
+    "class": "rec_cncpt",
+    "target": "id_tbl"
+  },
+  "gv_cv": {
+    "concepts": ["glu"],
+    "description": "Glucose coefficient of variation",
+    "callback": "gv_cv",
+    "class": "rec_cncpt",
+    "target": "id_tbl"
+  },
+  "gv_sd": {
+    "concepts": ["glu"],
+    "description": "Glucose standard deviation",
+    "callback": "gv_sd",
+    "class": "rec_cncpt",
+    "target": "id_tbl"
+  },
+  "hypo": {
+    "concepts": ["glu"],
+    "description": "hypoglycemia events",
+    "callback": "hypo_cb",
+    "class": "rec_cncpt"
+  },
+  "hypo_epi": {
+    "concepts": ["hypo"],
+    "description": "hypoglycemia repeated onsets",
+    "callback": "hypo_episode",
+    "class": "rec_cncpt"
+  },
+  "hypo_cnt": {
+    "concepts": ["hypo_epi"],
+    "description": "Number of hypoglycemic events",
+    "callback": "hypo_cnt",
+    "class": "rec_cncpt",
+    "target": "id_tbl"
+  },
+  "hypo_dur": {
+    "concepts": ["glu"],
+    "description": "Durations of hypos",
+    "callback": "hypo_dur",
+    "class": "rec_cncpt",
+    "target": "id_tbl"
+  },
+  "hypo_sev": {
+    "concepts": ["hypo_epi", "glu"],
+    "description": "Severity of hypos (mg/dL)",
+    "callback": "hypo_sev",
+    "class": "rec_cncpt",
+    "target": "id_tbl"
+  },
+  "SMK": {
+    "description": "Smoking (ICD-9)",
+    "category": "Misc.",
+    "target": "id_tbl",
+    "sources": {
+      "mimic_demo": [
+        {
+          "table": "diagnoses_icd",
+          "class": "col_itm",
+          "callback": "SMK_callback"
+        }
+      ],
+      "mimic": [
+        {
+          "table": "diagnoses_icd",
+          "class": "col_itm",
+          "callback": "SMK_callback"
+        }
+      ],
+      "eicu_demo": [
+        {
+          "table": "diagnosis",
+          "class": "col_itm",
+          "callback": "SMK_callback"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "diagnosis",
+          "class": "col_itm",
+          "callback": "SMK_callback"
+        }
+      ]
+    }
+  },
+  "icu_end": {
+    "target": "id_tbl",
+    "description": "ICU window",
+    "category": "outcome",
+    "sources": {
+      "aumc": [
+        {
+          "table": "admissions",
+          "class": "col_itm",
+          "val_var": "dischargedat"
+        }
+      ],
+      "eicu": [
+        {
+          "table": "patient",
+          "class": "col_itm",
+          "val_var": "unitdischargeoffset"
+        }
+      ],
+      "eicu_demo": [
+        {
+          "table": "patient",
+          "class": "col_itm",
+          "val_var": "unitdischargeoffset"
+        }
+      ],
+      "hirid": [
+        {
+          "callback": "stay_win_cb",
+          "win_type": "icustay",
+          "class": "fun_itm"
+        }
+      ],
+      "miiv": [
+        {
+          "table": "icustays",
+          "class": "col_itm",
+          "val_var": "outtime"
+        }
+      ],
+      "mimic": [
+        {
+          "table": "icustays",
+          "class": "col_itm",
+          "val_var": "outtime"
+        }
+      ],
+      "mimic_demo": [
+        {
+          "table": "icustays",
+          "class": "col_itm",
+          "val_var": "outtime"
+        }
+      ]
+    }
+  },
+  "tw_avg_glu": {
+    "concepts": ["glu", "icu_end"],
+    "description": "Time-weighted average glucose (mg/dL)",
+    "callback": "tw_avg_gluc",
     "class": "rec_cncpt",
     "target": "id_tbl"
   }

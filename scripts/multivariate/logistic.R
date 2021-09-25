@@ -70,9 +70,11 @@ multivariate <- function(src, coh, diabetes = FALSE) {
   
   logit0 <- glm(hypo ~ . - bmi, family = "binomial", data = rsh)
   logit <- glm(hypo ~ ., family = "binomial", data = rsh)
-  
+  # logit_bmixdiab <- glm(hypo ~ . + bmi:DM, family = "binomial", data = rsh)
+
   print(anova(logit0, logit, test = "Chisq")$`Pr(>Chi)`[2])
-  
+  # print(anova(logit, logit_bmixdiab, test = "Chisq")$`Pr(>Chi)`[2])
+ 
   # Step 4: get the table with ORs and CIs
   coef <- summary(logit)$coefficients
   

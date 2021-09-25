@@ -10,6 +10,9 @@ Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 # filter for age on MIMIC-III
 mimic <- load_concepts(c("age", "bmi"), "mimic", verbose = F)
 
+# filter for age on MIMIC-IV
+miiv <- load_concepts(c("age", "bmi"), "miiv", verbose = F)
+
 # filter for age on MIMIC-III
 eicu <- load_concepts(c("age", "bmi"), "eicu", verbose = F)
 
@@ -87,6 +90,12 @@ cohort <- list(
     insulin = unique(id_col(mimic[age >= 18L & !is.na(bmi)])),
     new = numeric(0L)
   ),
+  miiv = list(
+    all = unique(id_col(miiv[age >= 18L])),
+    bmi = unique(id_col(miiv[age >= 18L & !is.na(bmi)])),
+    insulin = unique(id_col(miiv[age >= 18L & !is.na(bmi)])),
+    new = numeric(0L)
+  ),
   eicu = list(
     all = pop_per_hosp(filter0),
     bmi = intersect(pop_per_hosp(filter0), 
@@ -132,13 +141,3 @@ cat("Total number of patients aged >= 18 years with BMI", n_bmi, "\n")
 cat("Patients excluded because of missing insulin", n_bmi - n_ins, "\n") # 3 hosp
 cat("Total number of patients aged >= 18 years with BMI & insulin centers", 
     n_ins, "\n")
-
-
-
-
-
-
-
-
-
-

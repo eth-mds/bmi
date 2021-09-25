@@ -3,7 +3,8 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
                    x_bins = config("bmi-bins")[["who"]], 
                    z = NULL, z_binning = NULL, coh = "bmi",
                    subset_fn = NULL,
-                   patient_ids = config("cohort")[[src]][[coh]]) {
+                   patient_ids = config("cohort")[[src]][[coh]],
+                   add_prop = NULL) {
   
   cat("Dataset(s):", src, "\n")
   if (length(src) > 1L) {
@@ -34,8 +35,12 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
   
   # load and apply z_bins to z if exists
   if (!is.null(z)) {
-    
+
     zt <- load_concepts(z, src, patient_ids = patient_ids)
+    if (is_ts_tbl(zt)) {
+      zt <- zt[, mean(get(z)), by = c(id_var(zt))]
+      zt <- rename_cols(zt, z, "V1")
+    }
     by.args <- c(by.args, z)
     
     zt[[z]] <- z_binning(zt[[z]])
@@ -45,7 +50,7 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
     
     yt <- yt[!is.na(get(z))]
   }
-  
+
   # independence tests:
   H_test(x = yt[["raw"]], y = yt[[y]], z = if (!is.null(z)) yt[[z]] else NULL) 
   
@@ -75,7 +80,11 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
   ret <- ret[, c(x, "V1", "lower", "upper", "Feature", z), with=FALSE]
   data.table::setnames(ret, x, "meanval")
   
-  ret[, dataset := paste(src, collapse = ", ")]
+  if (!is.null(add_prop)) {
+    pat_prop <- 100 * length(unique(id_col(yt[get(y) >0]))) / 
+      length(patient_ids)
+    ret[, dataset := paste0(srcwrap(src), " (", spec_dec(pat_prop, 1),"%)")]
+  } else ret[, dataset := paste(src, collapse = ", ")]
   
   ret
   

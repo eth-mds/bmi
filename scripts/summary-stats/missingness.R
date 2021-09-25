@@ -2,6 +2,7 @@ library(ricu)
 library(ggplot2)
 library(assertthat)
 library(boot)
+library(cowplot)
 library(data.table)
 library(scales)
 
@@ -67,7 +68,8 @@ for (c in cnc) {
       legend.position = fig[[c]][["pos"]],
       legend.box.background = element_rect()
     ) + scale_y_continuous(labels = percent) +
-    #scale_x_continuous(labels=bin_labels(config("bmi-bins")[["who"]], NULL)) +
+    scale_x_continuous(labels=bin_labels(config("bmi-bins")[["who"]], NULL),
+                       breaks = 1:6) +
     ylab("Percent patients with missing value") + xlab("BMI (kg/m2)")
   
 }

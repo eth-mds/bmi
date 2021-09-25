@@ -574,3 +574,5 @@ pol_varnames <- function(x) {
   
   x
 }
+
+spec_dec <- function(x, k) trimws(format(round(x, k), nsmall=k))
