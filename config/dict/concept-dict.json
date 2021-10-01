@@ -638,16 +638,10 @@
     "callback": "hypo_cb",
     "class": "rec_cncpt"
   },
-  "hypo_epi": {
-    "concepts": ["hypo"],
-    "description": "hypoglycemia repeated onsets",
-    "callback": "hypo_episode",
-    "class": "rec_cncpt"
-  },
   "hypo_cnt": {
-    "concepts": ["hypo_epi"],
+    "concepts": ["hypo"],
     "description": "Number of hypoglycemic events",
-    "callback": "hypo_cnt",
+    "callback": "hypo_epd",
     "class": "rec_cncpt",
     "target": "id_tbl"
   },
@@ -659,7 +653,7 @@
     "target": "id_tbl"
   },
   "hypo_sev": {
-    "concepts": ["hypo_epi", "glu"],
+    "concepts": ["hypo", "glu"],
     "description": "Severity of hypos (mg/dL)",
     "callback": "hypo_sev",
     "class": "rec_cncpt",
