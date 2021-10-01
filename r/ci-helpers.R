@@ -57,6 +57,7 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
   # bootstrap the mean of y and ci(y)
   get_ci <- function(sample) {
     
+    if(all(sample == mean(sample))) return(c(mean(sample), mean(sample)))
     sample <- sample[!is.na(sample)]
     boot.samp <- boot(data = sample, statistic =
                         function(data, indices) mean(data[indices], na.rm = F),
@@ -66,7 +67,7 @@ CI_dat <- function(src, upto = hours(Inf), y = "death", x = "bmi",
     return(boot.ci$basic[4:5])
     
   }
-  
+
   ret <- yt[, list(mean(get(y), na.rm = T), list(get_ci(get(y))),
                    Feature = x), by = by.args]
   

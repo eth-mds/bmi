@@ -298,18 +298,20 @@ hypo_only <- function(src, patient_ids, upto) {
 assoc_hmap <- function(res, gm = "gv_cv", bins = c(10, 20, 30),
                        bin_lvls = c("<10%", "10-20%", "20-30%", ">30%"),
                        y_label = "Glucose coefficient of variation",
-                       title = "Glucsoe variability and mortality") {
+                       title = "Glucose variability and mortality") {
   
   bern_ci <- function(p, n) {
     if (length(p) > 1) return(unlist(Map(bern_ci, p, n)))
+    
     if (n > 100) {
       sgm <- sqrt(p * (1-p) / n)
-      return(paste0("(", spec_dec(p - 1.96*sgm, 2), "-", 
-                    spec_dec(p + 1.96*sgm, 2), ")"))
-    } else {
-      pqs <- quantile(rbinom(100, n, p)/n, c(0.025, 0.975))
-      return(paste0("(", spec_dec(pqs[1], 2), "-", spec_dec(pqs[2], 2), ")")) 
+      if (p - 1.96*sgm >= 0) {
+        return(paste0("(", spec_dec(p - 1.96*sgm, 2), "-", 
+                      spec_dec(p + 1.96*sgm, 2), ")"))
+      }
     }
+    pqs <- quantile(rbinom(100, n, p)/n, c(0.025, 0.975))
+    return(paste0("(", spec_dec(pqs[1], 2), "-", spec_dec(pqs[2], 2), ")"))
   }
   
   res <- res[!is.na(get(gm))]
@@ -328,7 +330,7 @@ assoc_hmap <- function(res, gm = "gv_cv", bins = c(10, 20, 30),
   ggplot(dat, aes_string(x = "DM", y = gm, fill = "Mortality")) +
     geom_bin_2d(aes_string(y = gm)) +
     facet_grid(cols = vars(bmi_bins)) + 
-    scale_fill_viridis_c(limits = c(0.02, 0.26), breaks = c(0.05, 0.15, 0.25)) +
+    scale_fill_viridis_c(limits = c(0.00, 0.26), breaks = c(0.05, 0.15, 0.25)) +
     geom_text(aes(label = txt_lab), color = "red", size = 3) +
     xlab("BMI bins") + ylab(y_label) +
     theme_bw() + ggtitle(title) + xlab(NULL) +

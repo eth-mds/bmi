@@ -323,7 +323,8 @@ gv_sd <- function(glu, ...) {
   glu[, list(gv_sd = sd(glu)), by = c(id_vars(glu))]
 }
 
-hypo_term <- function(x, min_dur, max_dur) {
+
+hypo_epd <- function(hypo, min_dur = hours(6L), ...) {
   
   mrg <- function(x) cumsum(c(TRUE, x[-length(x)]))
   
@@ -333,73 +334,21 @@ hypo_term <- function(x, min_dur, max_dur) {
     if (sft <= length(x)) replace(x, sft, -x[ind]) else x
   }
   
-  idv <- id_vars(x)
-  idx <- index_var(x)
+  idv <- id_vars(hypo)
+  idx <- index_var(hypo)
   
-  assert_that(!any(c("diff", "hdif", "nhyp", "impu") %in% colnames(x)))
-  
-  x <- x[!is.na(hypo), diff := c(diff(get(idx)), Inf), by = c(idv)]
-  x <- x[is_true(hypo > 0L), hdif := c(diff(get(idx)), Inf), by = c(idv)]
-  x <- x[!is.na(hdif), nhyp := .N, by = c(idv)]
-  
-  x <- x[is_true(nhyp > 1L), hypo := mrg(hdif > min_dur | diff < hdif),
-         by = c(idv)]
-  x <- x[, c("diff", "hdif", "nhyp") := NULL]
-  
-  x <- x[, impu := data.table::nafill(hypo, "locf"), by = c(idv)]
-  x <- x[, impu := data.table::nafill(impu, fill = 0)]
-  
-  mxd <- as.integer(
-    ceiling(max_dur / as.double(interval(x), units = units(max_dur)))
-  )
-  
-  x <- x[impu > 0L, hypo := trm(hypo, mxd), by = c(idv, "impu")]
-  x <- x[, impu := NULL]
-  
-  x
-}
+  assert_that(!any(c("diff", "hdif", "nhyp", "impu") %in% colnames(hypo)))
 
-#' @return Constructed from a `hypo` column a returned by `hypo_term()`,
-#' several columns are added to the passed `ts_tbl` and returned as such:
-#' * `hypo_imp`: using an locf imputation scheme, hypo periods are marked by
-#' ascending even numbers and the preceding non-hypo periods by odd integers.
-#' * `hypo_epi`: hypo episodes are constructed from the `hypo_imp` column such
-#' that a given hypo periods and the stretch leading up to it have assigned the
-#' same integer.
-#' * `start_time`: Time relative to the start of a given hypo episode.
-#' * `onset_time`: Either `NA` if a given hypo episode does not contain a hypo
-#' onset or the time relative to hypo onset.
-hypo_augm <- function(x) {
+  hypo <- hypo[!is.na(hypo), diff := c(diff(get(idx)), Inf), by = c(idv)]
+  hypo <- hypo[is_true(hypo > 0L), hdif := c(diff(get(idx)), Inf), by = c(idv)]
+  hypo <- hypo[!is.na(hdif), nhyp := .N, by = c(idv)]
   
-  shift <- function(x) data.table::fifelse(x > 0L, x * 2L, x * -2L + 1L, 1L)
+  hypo <- hypo[is_true(nhyp > 1L), hypo := mrg(hdif > min_dur | diff < hdif),
+         by = c(idv)]
+  hypo <- hypo[, c("diff", "hdif", "nhyp") := NULL]
+  hypo <- hypo[, hypo := data.table::nafill(hypo, fill = 0)]
   
-  timed <- function(tim, i, j) list(tim - tim[i], tim - tim[j])
-  
-  idv <- id_vars(x)
-  
-  assert_that(!"temp" %in% colnames(x))
-  
-  x <- x[, c("temp", "hypo") := list(
-    data.table::fifelse(hypo < 0L, 0L, hypo), NULL
-  )]
-  
-  x <- x[, temp := data.table::nafill(temp, "locf"), by = c(idv)]
-  x <- x[, temp := data.table::nafill(temp, fill = 0L)]
-  
-  x <- x[, temp := c(0L, diff(temp)), by = c(idv)]
-  x <- x[, temp := data.table::fifelse(
-    temp == 0L, NA_integer_, temp
-  )]
-  x <- x[, temp := data.table::nafill(temp, "locf"), by = c(idv)]
-  x <- x[, c("hypo_imp", "temp") := list(shift(temp), NULL)]
-  x <- x[, hypo_epi := (hypo_imp + 1L) %/% 2L]
-  
-  x <- x[, c("start_time", "onset_time") := timed(
-    get(index_var(x)), 1L, c(FALSE, diff(hypo_imp) > 0L)),
-    by = c(idv, "hypo_epi")
-  ]
-  
-  x
+  hypo[, list(hypo_cnt = max(hypo)), by = c(idv)]
 }
 
 hypo_cb <- function(glu, ...) {
@@ -417,21 +366,7 @@ hypo_cb <- function(glu, ...) {
   glu
 }
 
-hypo_episode <- function(hypo, min_dur = hours(6L), max_dur = hours(4L), ...) {
-  
-  hypo <- hypo_term(hypo, min_dur, max_dur)
-  hypo <- hypo_augm(hypo)
-  
-  hypo[, c("hypo_epi", "start_time", "onset_time") := NULL]
-  
-  rename_cols(hypo, "hypo_epi", "hypo_imp")
-}
-
-hypo_cnt <- function(hypo_epi, ...) {
-  hypo_epi[, list(hypo_cnt = floor(max(hypo_epi / 2))), by = c(id_vars(hypo_epi))]
-}
-
-hypo_dur <- function(glu, ... ) {
+hypo_dur <- function(glu, ...) {
   
   ind <- index_var(glu)
   glu <- glu[get(ind) >= hours(0L)]
@@ -439,13 +374,11 @@ hypo_dur <- function(glu, ... ) {
   
 }
 
-hypo_sev <- function(hypo_epi, glu, ...) {
+hypo_sev <- function(hypo, glu, ...) {
   
-  hypo_epi <- merge(hypo_epi, glu, all.x = TRUE)
-  
-  hypo_epi[hypo_epi %% 2 == 0, 
-           list(hypo_sev = min(glu, na.rm = TRUE)), 
-           by = c(id_var(hypo_epi), "hypo_epi")]
+  hypo <- merge(hypo, glu, all.x = TRUE)
+  idv <- id_vars(hypo)
+  hypo[hypo > 0, list(hypo_sev = min(glu, na.rm = TRUE)), by = c(idv)]
   
 }
 

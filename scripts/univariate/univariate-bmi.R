@@ -21,60 +21,60 @@ Sys.setenv("RICU_CONFIG_PATH" = file.path(root, "config", "dict"))
 src <- c("aumc", "hirid", "mimic", "eicu")
 
 figures <- list(
-  # tw_avg_glucose = list(
-  #   title = "Time-weighted average glucose by dataset",
-  #   y_label = "Time-weighted average glucose (mg/dL)",
-  #   coh = "bmi",
-  #   pos.x = 0.2,
-  #   pos.y = 0.8
-  # ),
-  # gv_cv = list(
-  #   title = "Glucose coefficient of variation by dataset",
-  #   y_label = "Blood glucose coefficient of variation (%)",
-  #   coh = "bmi",
-  #   pos.x = 0.2,
-  #   pos.y = 0.8
-  # ),
-  # hypo = list(
-  #   title = "Hypoglycemia prevalence by dataset",
-  #   y_label = "Hypoglycemia (proportion)",
-  #   coh = "bmi",
-  #   pos.x = 0.5,
-  #   pos.y = 0.8
-  # ),
-  # hypo = list(
-  #   title = "Hypoglycemia in highly monitored group by dataset",
-  #   y_label = "Hypoglycemia (proportion)",
-  #   coh = "bmi",
-  #   subset_fn = high_freq,
-  #   pos.x = 0.5,
-  #   pos.y = 0.8
-  # ),
-  # death = list(
-  #   title = "Mortality by dataset",
-  #   y_label = "Mortality (proportion)",
-  #   coh = "bmi",
-  #   pos.x = 0.7,
-  #   pos.y = 0.8
-  # ),
-  # death = list(
-  #   title = "Mortality in hypoglycemic group by dataset",
-  #   y_label = "Mortality (proportion)",
-  #   coh = "bmi",
-  #   subset_fn = hypo_only,
-  #   pos.x = 0.7,
-  #   pos.y = 0.8
-  # ),
-  # glu_freq = list(
-  #   title = "Frequency of glucose measurements by dataset",
-  #   y_label = "Mean time between gluc. measurements (h)",
-  #   coh = "bmi",
-  #   pos.x = 0.4,
-  #   pos.y = 0.5
-  # ),
+  tw_avg_glucose = list(
+    title = "Time-weighted average glucose by dataset",
+    y_label = "Time-weighted average glucose (mg/dL)",
+    coh = "bmi",
+    pos.x = 0.2,
+    pos.y = 0.8
+  ),
+  gv_cv = list(
+    title = "Glucose coefficient of variation by dataset",
+    y_label = "Blood glucose coefficient of variation (%)",
+    coh = "bmi",
+    pos.x = 0.2,
+    pos.y = 0.8
+  ),
+  hypo = list(
+    title = "Hypoglycemia prevalence by dataset",
+    y_label = "Hypoglycemia (proportion)",
+    coh = "bmi",
+    pos.x = 0.5,
+    pos.y = 0.8
+  ),
+  hypo = list(
+    title = "Hypoglycemia in highly monitored group by dataset",
+    y_label = "Hypoglycemia (proportion)",
+    coh = "bmi",
+    subset_fn = high_freq,
+    pos.x = 0.5,
+    pos.y = 0.8
+  ),
+  death = list(
+    title = "Mortality by dataset",
+    y_label = "Mortality (proportion)",
+    coh = "bmi",
+    pos.x = 0.7,
+    pos.y = 0.8
+  ),
+  death = list(
+    title = "Mortality in hypoglycemic group by dataset",
+    y_label = "Mortality (proportion)",
+    coh = "bmi",
+    subset_fn = hypo_only,
+    pos.x = 0.7,
+    pos.y = 0.8
+  ),
+  glu_freq = list(
+    title = "Frequency of glucose measurements by dataset",
+    y_label = "Mean time between gluc. measurements (h)",
+    coh = "bmi",
+    pos.x = 0.4,
+    pos.y = 0.5
+  ),
   hypo_dur = list(
     title = "Duration of hypoglycemia by dataset",
-    y_label = "Blood glucose (mg/dL)",
+    y_label = "Proportion of glucose values below 70 mg/dL",
     coh = "bmi",
     subset_fn = hypo_only,
     pos.x = 0.4,
@@ -82,7 +82,7 @@ figures <- list(
   ),
   hypo_cnt = list(
     title = "Number of hypoglycemic episodes by dataset",
-    y_label = "Blood glucose (mg/dL)",
+    y_label = "Number of hypoglycemic episodes",
     coh = "bmi",
     subset_fn = hypo_only,
     pos.x = 0.4,
@@ -141,7 +141,9 @@ figures <- list(
 )
 
 # unconditional, single-source plots
-for (i in 1:length(figures)) {
+
+for (i in c(9, 10)) {
+#for (i in 1:length(figures)) {
   
   cat("-----------------------\n")
   
@@ -184,35 +186,35 @@ for (i in 1:length(figures)) {
 # ggsave(file.path(root, "figures", "Figure2.0.tiff"), plot = fig1, 
 #        width = 18, height = 12, type = "cairo", compression = "lzw")
 # 
-# leg3 <- get_legend(
-#   figures[["glu_freq"]][["plot"]] + theme(legend.position = "bottom")
-# )
-# 
-# fig3 <- plot_grid(
-#   figures[["glu_freq"]][["plot"]] + theme(legend.position = "none"),
-#   figures[[4L]][["plot"]] + theme(legend.position = "none"),
-#   figures[[6L]][["plot"]] + theme(legend.position = "none"),
-#   figures[["hypo_sev"]][["plot"]] + theme(legend.position = "none"),
-#   figures[["hypo_dur"]][["plot"]] + theme(legend.position = "none"),
-#   figures[["hypo_cnt"]][["plot"]] + theme(legend.position = "none"),
+leg3 <- get_legend(
+  figures[["glu_freq"]][["plot"]] + theme(legend.position = "bottom")
+)
+
+fig3 <- plot_grid(
+  figures[["glu_freq"]][["plot"]] + theme(legend.position = "none"),
+  figures[[4L]][["plot"]] + theme(legend.position = "none"),
+  figures[[6L]][["plot"]] + theme(legend.position = "none"),
+  figures[["hypo_sev"]][["plot"]] + theme(legend.position = "none"),
+  figures[["hypo_dur"]][["plot"]] + theme(legend.position = "none"),
+  figures[["hypo_cnt"]][["plot"]] + theme(legend.position = "none"),
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)"),
+  ncol = 2L
+)
+fig3 <- plot_grid(fig3, leg3, ncol = 1L, rel_heights = c(1, 0.05))
+
+ggsave(file.path(root, "figures", "Figure5.0.tiff"), plot = fig3,
+       width = 18, height = 18, type = "cairo", compression = "lzw")
+
+# fig4 <- plot_grid(
+#   figures[["max_insulin"]][["plot"]],
+#   figures[["max_insulin_wnorm"]][["plot"]],
+#   figures[["dur_TPN"]][["plot"]],
+#   figures[["dur_enteral"]][["plot"]],
+#   figures[["dur_cortico"]][["plot"]],
+#   figures[["tw_avg_dextrose"]][["plot"]],
 #   labels = c("a)", "b)", "c)", "d)", "e)", "f)"), 
 #   ncol = 2L
 # )
-# fig3 <- plot_grid(fig3, leg3, ncol = 1L, rel_heights = c(1, 0.05))
 # 
-# ggsave(file.path(root, "figures", "Figure5.0.tiff"), plot = fig3, 
+# ggsave(file.path(root, "figures", "Figure6.0.tiff"), plot = fig4, 
 #        width = 18, height = 18, type = "cairo", compression = "lzw")
-
-fig4 <- plot_grid(
-  figures[["max_insulin"]][["plot"]],
-  figures[["max_insulin_wnorm"]][["plot"]],
-  figures[["dur_TPN"]][["plot"]],
-  figures[["dur_enteral"]][["plot"]],
-  figures[["dur_cortico"]][["plot"]],
-  figures[["tw_avg_dextrose"]][["plot"]],
-  labels = c("a)", "b)", "c)", "d)", "e)", "f)"), 
-  ncol = 2L
-)
-
-ggsave(file.path(root, "figures", "Figure6.0.tiff"), plot = fig4, 
-       width = 18, height = 18, type = "cairo", compression = "lzw")

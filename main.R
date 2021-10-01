@@ -20,6 +20,8 @@ source(file.path(root, "scripts", "summary-stats", "missingness.R"))
 
 # Univariate Analyses
 source(file.path(root, "scripts", "univariate", "univariate-bmi.R"))
+source(file.path(root, "scripts", "univariate", "univariate-cond.R"))
+source(file.path(root, "scripts", "univariate", "association.R"))
 
 # Multivariate Analyses
 source(file.path(root, "scripts", "multivariate", "logistic.R"))
